@@ -1,1 +1,7 @@
 project_id = "iztvlqhaypkaqowtmhya"
+
+[functions.admin-create-user]
+verify_jwt = false
+
+[functions.bootstrap-admin]
+verify_jwt = false
