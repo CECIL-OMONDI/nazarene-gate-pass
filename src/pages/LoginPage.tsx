@@ -1,94 +1,62 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { login } from "@/lib/store";
-import { Shield, LogIn } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { signInWithUsername } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { Building2 } from "lucide-react";
 
-const LoginPage = () => {
+export default function LoginPage() {
+  const nav = useNavigate();
+  const { user } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => { if (user) nav("/app"); }, [user, nav]);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(username, password)) {
-      toast.success("Welcome to ANU Gate System");
-      navigate("/admin");
-    } else {
-      toast.error("Invalid credentials");
-    }
+    setBusy(true);
+    try {
+      await signInWithUsername(username, password);
+      nav("/app");
+    } catch (err) {
+      toast.error((err as Error).message || "Login failed");
+    } finally { setBusy(false); }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-secondary">
-      {/* Header bar */}
-      <div className="w-full bg-secondary py-3 px-6 flex items-center gap-3 border-b border-secondary-foreground/10">
-        <Shield className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="font-heading text-lg font-bold text-primary">
-            AFRICA NAZARENE UNIVERSITY
-          </h1>
-          <p className="text-xs text-secondary-foreground/70">
-            Gate Security System
-          </p>
-        </div>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
-          <div className="bg-card rounded-lg shadow-xl p-8 border border-border">
-            <div className="text-center mb-8">
-              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                <LogIn className="h-8 w-8 text-primary" />
-              </div>
-              <h2 className="font-heading text-2xl font-bold text-foreground">
-                Admin Login
-              </h2>
-              <p className="text-muted-foreground text-sm mt-1">
-                Sign in to manage the gate system
-              </p>
+    <div className="min-h-screen flex items-center justify-center bg-secondary p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <Building2 className="h-10 w-10 text-primary mx-auto mb-2" />
+          <CardTitle>Mbingo Staff Portal</CardTitle>
+          <CardDescription>Sign in with your username and password</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={submit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Username</Label>
+              <Input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="username" />
             </div>
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full font-heading font-semibold">
-                Sign In
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-xs text-muted-foreground">
-                Default: admin / anu2024
-              </p>
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
             </div>
-          </div>
-        </div>
-      </div>
+            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Signing in…" : "Sign In"}</Button>
+            <div className="text-center text-sm text-muted-foreground">
+              <Link to="/" className="hover:text-primary">← Back to website</Link>
+            </div>
+            <div className="text-center text-xs text-muted-foreground border-t pt-3">
+              First-time setup? <Link to="/bootstrap" className="text-primary underline">Create the first admin</Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default LoginPage;
+}
