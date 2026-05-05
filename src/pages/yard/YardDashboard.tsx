@@ -6,48 +6,134 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Truck } from "lucide-react";
+import { Truck, Trash2, Pencil, AlertTriangle, Eye } from "lucide-react";
 
-export default function YardDashboard() {
+type Props = { readOnly?: boolean };
+
+export default function YardDashboard({ readOnly = false }: Props) {
   const [pending, setPending] = useState<any[]>([]);
   const [yard, setYard] = useState<any[]>([]);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [sites, setSites] = useState<any[]>([]);
+  const [siteInv, setSiteInv] = useState<any[]>([]);
+  const [siteTools, setSiteTools] = useState<any[]>([]);
+
   const load = async () => {
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("id, status, created_at, notes, sites(name), profiles:contractor_id(full_name), order_items(quantity, materials(id, name, unit))")
-      .eq("status", "pending")
-      .order("created_at");
-    setPending(orders ?? []);
-    const { data: y } = await supabase.from("yard_inventory").select("material_id, quantity, materials(name, unit)");
-    setYard(y ?? []);
+    const [{ data: orders }, { data: y }, { data: m }, { data: a }, { data: s }, { data: si }, { data: tl }] = await Promise.all([
+      supabase.from("orders")
+        .select("id, status, created_at, notes, sites(name), profiles:contractor_id(full_name), order_items(id, quantity, materials(id, name, unit))")
+        .eq("status", "pending").order("created_at"),
+      supabase.from("yard_inventory").select("material_id, quantity, materials(name, unit)"),
+      supabase.from("materials").select("id, name, unit").order("name"),
+      supabase.from("low_stock_alerts").select("id, material_id, message, status, created_at, materials(name, unit)").order("created_at", { ascending: false }),
+      supabase.from("sites").select("id, name, location"),
+      supabase.from("site_inventory").select("site_id, material_id, quantity, sites(name), materials(name, unit)"),
+      supabase.from("tools").select("id, name, quantity, condition, site_id, sites(name)"),
+    ]);
+    setPending(orders ?? []); setYard(y ?? []); setMaterials(m ?? []);
+    setAlerts(a ?? []); setSites(s ?? []); setSiteInv(si ?? []); setSiteTools(tl ?? []);
   };
   useEffect(() => { load(); }, []);
 
   return (
-    <AppShell title="Yard Storekeeper">
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <Card><CardHeader><CardTitle>Pending Orders</CardTitle></CardHeader><CardContent className="space-y-3">
-            {pending.length === 0 && <div className="text-muted-foreground text-sm">No pending orders.</div>}
-            {pending.map(o => <OrderCard key={o.id} order={o} onChange={load} />)}
+    <AppShell title={readOnly ? "Yard Storekeeper (View Only)" : "Yard Storekeeper"}>
+      <Tabs defaultValue="orders">
+        <TabsList className="mb-4">
+          <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="yard">Yard Stock</TabsTrigger>
+          <TabsTrigger value="sites"><Eye className="h-4 w-4 mr-1"/>Site Stock & Tools</TabsTrigger>
+          <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Low-Stock Alerts</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="orders">
+          <Card><CardHeader><CardTitle>Pending Orders</CardTitle></CardHeader><CardContent>
+            <ScrollArea className="max-h-[70vh] pr-3">
+              <div className="space-y-3">
+                {pending.length === 0 && <div className="text-muted-foreground text-sm">No pending orders.</div>}
+                {pending.map(o => <OrderCard key={o.id} order={o} yard={yard} onChange={load} readOnly={readOnly} />)}
+              </div>
+            </ScrollArea>
           </CardContent></Card>
-        </div>
-        <Card><CardHeader><CardTitle>Yard Stock</CardTitle></CardHeader><CardContent>
-          <Table>
-            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Qty</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {yard.map(s => <TableRow key={s.material_id}><TableCell>{s.materials?.name}</TableCell><TableCell className="font-mono">{Number(s.quantity).toFixed(2)} {s.materials?.unit}</TableCell></TableRow>)}
-            </TableBody>
-          </Table>
-        </CardContent></Card>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="yard">
+          <Card><CardHeader><CardTitle>Yard Stock</CardTitle></CardHeader><CardContent>
+            <ScrollArea className="max-h-[70vh]">
+              <Table>
+                <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Qty</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {yard.map(s => <TableRow key={s.material_id}><TableCell>{s.materials?.name}</TableCell><TableCell className="font-mono">{Number(s.quantity).toFixed(2)} {s.materials?.unit}</TableCell></TableRow>)}
+                  {yard.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-6">Empty</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="sites">
+          <div className="grid lg:grid-cols-2 gap-4">
+            <Card><CardHeader><CardTitle>Site Stock (read-only)</CardTitle></CardHeader><CardContent>
+              <ScrollArea className="max-h-[70vh]">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Site</TableHead><TableHead>Material</TableHead><TableHead>Qty</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {siteInv.map((s, i) => <TableRow key={i}><TableCell>{s.sites?.name}</TableCell><TableCell>{s.materials?.name}</TableCell><TableCell className="font-mono">{Number(s.quantity).toFixed(2)} {s.materials?.unit}</TableCell></TableRow>)}
+                    {siteInv.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No site stock</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent></Card>
+            <Card><CardHeader><CardTitle>Site Tools (read-only)</CardTitle></CardHeader><CardContent>
+              <ScrollArea className="max-h-[70vh]">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Site</TableHead><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Condition</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {siteTools.map(t => <TableRow key={t.id}><TableCell>{t.sites?.name}</TableCell><TableCell>{t.name}</TableCell><TableCell className="font-mono">{t.quantity}</TableCell><TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : "text-muted-foreground"}>{t.condition}</span></TableCell></TableRow>)}
+                    {siteTools.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No tools</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent></Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="alerts">
+          <Card><CardHeader className="flex-row items-center justify-between">
+            <CardTitle>Low-Stock Alerts</CardTitle>
+            {!readOnly && <NewAlertButton materials={materials} reload={load} />}
+          </CardHeader><CardContent>
+            <ScrollArea className="max-h-[70vh]">
+              <Table>
+                <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Message</TableHead><TableHead>Status</TableHead><TableHead>Raised</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {alerts.map(a => <TableRow key={a.id}>
+                    <TableCell>{a.materials?.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{a.message}</TableCell>
+                    <TableCell><span className={a.status === "open" ? "text-destructive font-medium" : "text-muted-foreground"}>{a.status}</span></TableCell>
+                    <TableCell className="text-xs">{new Date(a.created_at).toLocaleString()}</TableCell>
+                  </TableRow>)}
+                  {alerts.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No alerts</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent></Card>
+        </TabsContent>
+      </Tabs>
     </AppShell>
   );
 }
 
-function OrderCard({ order, onChange }: { order: any; onChange: () => void }) {
+function OrderCard({ order, yard, onChange, readOnly }: { order: any; yard: any[]; onChange: () => void; readOnly: boolean }) {
   const [open, setOpen] = useState(false);
   const [driver, setDriver] = useState(""); const [plate, setPlate] = useState(""); const [vehicle, setVehicle] = useState("");
   const [busy, setBusy] = useState(false);
@@ -60,6 +146,12 @@ function OrderCard({ order, onChange }: { order: any; onChange: () => void }) {
     toast.success("Order dispatched"); setOpen(false); onChange();
   };
 
+  const cancelOrder = async () => {
+    const { error } = await supabase.rpc("cancel_pending_order", { _order_id: order.id });
+    if (error) return toast.error(error.message);
+    toast.success("Order cancelled"); onChange();
+  };
+
   return (
     <div className="border rounded-lg p-4">
       <div className="flex items-start justify-between gap-3">
@@ -67,28 +159,112 @@ function OrderCard({ order, onChange }: { order: any; onChange: () => void }) {
           <div className="font-semibold">{order.sites?.name}</div>
           <div className="text-xs text-muted-foreground">By {order.profiles?.full_name} · {new Date(order.created_at).toLocaleString()}</div>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm"><Truck className="h-4 w-4 mr-1"/>Dispatch</Button></DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Dispatch Order</DialogTitle></DialogHeader>
-            <form onSubmit={dispatch} className="space-y-3">
-              <div><Label>Driver name</Label><Input value={driver} onChange={e=>setDriver(e.target.value)} required /></div>
-              <div><Label>Plate number</Label><Input value={plate} onChange={e=>setPlate(e.target.value)} required /></div>
-              <div><Label>Vehicle (optional)</Label><Input value={vehicle} onChange={e=>setVehicle(e.target.value)} placeholder="e.g. Isuzu Lorry" /></div>
-              <Button className="w-full" disabled={busy}>{busy ? "Dispatching…" : "Confirm Dispatch"}</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild><Button size="sm"><Truck className="h-4 w-4 mr-1"/>Dispatch</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Dispatch Order</DialogTitle></DialogHeader>
+                <form onSubmit={dispatch} className="space-y-3">
+                  <div><Label>Driver name</Label><Input value={driver} onChange={e=>setDriver(e.target.value)} required /></div>
+                  <div><Label>Plate number</Label><Input value={plate} onChange={e=>setPlate(e.target.value)} required /></div>
+                  <div><Label>Vehicle (optional)</Label><Input value={vehicle} onChange={e=>setVehicle(e.target.value)} /></div>
+                  <Button className="w-full" disabled={busy}>{busy ? "Dispatching…" : "Confirm Dispatch"}</Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <AlertDialog>
+              <AlertDialogTrigger asChild><Button size="sm" variant="destructive"><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
+                  <AlertDialogDescription>This permanently removes the pending order from the contractor's dashboard.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep</AlertDialogCancel>
+                  <AlertDialogAction onClick={cancelOrder}>Cancel Order</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </div>
       <ul className="mt-3 text-sm">
-        {order.order_items.map((it: any, i: number) => (
-          <li key={i} className="flex justify-between border-t py-1.5">
-            <span>{it.materials?.name}</span>
-            <span className="font-mono">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span>
-          </li>
-        ))}
+        {order.order_items.map((it: any) => {
+          const inYard = yard.find(y => y.material_id === it.materials?.id);
+          const avail = inYard ? Number(inYard.quantity) : 0;
+          const short = avail < Number(it.quantity);
+          return (
+            <li key={it.id} className="flex items-center justify-between border-t py-1.5 gap-2">
+              <span className="flex-1">{it.materials?.name}
+                {short && <span className="ml-2 text-xs text-destructive">(yard has {avail.toFixed(2)})</span>}
+              </span>
+              <span className="font-mono text-sm">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span>
+              {!readOnly && <EditItemButton item={it} maxAvail={avail} reload={onChange} />}
+            </li>
+          );
+        })}
       </ul>
       {order.notes && <div className="text-xs text-muted-foreground mt-2">Notes: {order.notes}</div>}
     </div>
+  );
+}
+
+function EditItemButton({ item, maxAvail, reload }: { item: any; maxAvail: number; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(String(item.quantity));
+  const save = async () => {
+    const q = Number(val);
+    if (Number.isNaN(q) || q < 0) return toast.error("Enter a valid quantity");
+    const { error } = await supabase.rpc("update_pending_order_item", { _item_id: item.id, _new_quantity: q });
+    if (error) return toast.error(error.message);
+    toast.success(q === 0 ? "Line removed" : "Quantity updated");
+    setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7"><Pencil className="h-3 w-3"/></Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Edit {item.materials?.name}</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>New quantity ({item.materials?.unit}) — yard has {maxAvail.toFixed(2)}</Label>
+          <Input type="number" min="0" step="0.01" value={val} onChange={e => setVal(e.target.value)} />
+          <p className="text-xs text-muted-foreground">Set to 0 to remove this item. The contractor will see your final adjusted quantity.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NewAlertButton({ materials, reload }: { materials: any[]; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [matId, setMatId] = useState(""); const [msg, setMsg] = useState("");
+  const submit = async () => {
+    if (!matId) return toast.error("Choose a material");
+    const { error } = await supabase.rpc("create_low_stock_alert", { _material_id: matId, _message: msg || null });
+    if (error) return toast.error(error.message);
+    toast.success("Alert raised to admin"); setOpen(false); setMatId(""); setMsg(""); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button size="sm"><AlertTriangle className="h-4 w-4 mr-1"/>Alert Admin</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Low-Stock Alert</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div><Label>Material</Label>
+            <Select value={matId} onValueChange={setMatId}>
+              <SelectTrigger><SelectValue placeholder="Select material" /></SelectTrigger>
+              <SelectContent>{materials.map(m => <SelectItem key={m.id} value={m.id}>{m.name} ({m.unit})</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div><Label>Message (optional)</Label><Input value={msg} onChange={e=>setMsg(e.target.value)} placeholder="e.g. Only 2 bags of cement left" /></div>
+        </div>
+        <DialogFooter><Button onClick={submit}>Send Alert</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

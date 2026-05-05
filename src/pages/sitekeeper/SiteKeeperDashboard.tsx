@@ -7,32 +7,41 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CheckCircle2, MinusCircle } from "lucide-react";
+import { CheckCircle2, MinusCircle, Wrench, AlertOctagon } from "lucide-react";
 
-export default function SiteKeeperDashboard() {
+type Props = { readOnly?: boolean };
+
+export default function SiteKeeperDashboard({ readOnly = false }: Props) {
   const { user } = useAuth();
   const [sites, setSites] = useState<any[]>([]);
   const [activeSiteId, setActiveSiteId] = useState<string>("");
   const [incoming, setIncoming] = useState<any[]>([]);
   const [stock, setStock] = useState<any[]>([]);
+  const [tools, setTools] = useState<any[]>([]);
 
   const loadSites = async () => {
     if (!user) return;
-    const { data } = await supabase.from("sites").select("*").eq("site_keeper_id", user.id);
+    const q = readOnly
+      ? supabase.from("sites").select("*")
+      : supabase.from("sites").select("*").eq("site_keeper_id", user.id);
+    const { data } = await q;
     setSites(data ?? []);
     if (data && data.length && !activeSiteId) setActiveSiteId(data[0].id);
   };
 
   const loadSite = async () => {
     if (!activeSiteId) return;
-    const { data: o } = await supabase.from("orders")
-      .select("id, status, created_at, sites(name), order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
-      .eq("site_id", activeSiteId).eq("status", "dispatched");
-    setIncoming(o ?? []);
-    const { data: s } = await supabase.from("site_inventory").select("material_id, quantity, materials(id, name, unit)").eq("site_id", activeSiteId);
-    setStock(s ?? []);
+    const [{ data: o }, { data: s }, { data: t }] = await Promise.all([
+      supabase.from("orders")
+        .select("id, status, created_at, sites(name), order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
+        .eq("site_id", activeSiteId).eq("status", "dispatched"),
+      supabase.from("site_inventory").select("material_id, quantity, materials(id, name, unit)").eq("site_id", activeSiteId),
+      supabase.from("tools").select("id, name, quantity, condition").eq("site_id", activeSiteId).order("name"),
+    ]);
+    setIncoming(o ?? []); setStock(s ?? []); setTools(t ?? []);
   };
 
   useEffect(() => { loadSites(); }, [user]);
@@ -45,8 +54,14 @@ export default function SiteKeeperDashboard() {
     loadSite();
   };
 
+  const setCondition = async (toolId: string, condition: "working" | "broken") => {
+    const { error } = await supabase.rpc("set_tool_condition", { _tool_id: toolId, _condition: condition });
+    if (error) return toast.error(error.message);
+    toast.success(`Marked ${condition}`); loadSite();
+  };
+
   return (
-    <AppShell title="Site Storekeeper">
+    <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"}>
       <div className="mb-4 max-w-sm">
         <Label>Site</Label>
         <Select value={activeSiteId} onValueChange={setActiveSiteId}>
@@ -56,34 +71,66 @@ export default function SiteKeeperDashboard() {
       </div>
 
       {!activeSiteId ? <div className="text-muted-foreground">No sites assigned.</div> : (
-        <div className="grid lg:grid-cols-2 gap-4">
-          <Card><CardHeader><CardTitle>Incoming Deliveries</CardTitle></CardHeader><CardContent className="space-y-3">
-            {incoming.length === 0 && <div className="text-muted-foreground text-sm">No incoming deliveries.</div>}
-            {incoming.map(o => (
-              <div key={o.id} className="border rounded p-3">
-                <div className="flex justify-between"><span className="font-semibold">Delivery</span><span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span></div>
-                {o.order_dispatches && <div className="text-xs text-muted-foreground">Driver {o.order_dispatches.driver_name} · {o.order_dispatches.plate_number}{o.order_dispatches.vehicle ? ` · ${o.order_dispatches.vehicle}` : ""}</div>}
-                <ul className="text-sm mt-2">
-                  {o.order_items.map((it: any, i: number) => <li key={i} className="flex justify-between border-t py-1"><span>{it.materials?.name}</span><span className="font-mono">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span></li>)}
-                </ul>
-                <Button size="sm" className="mt-3 w-full" onClick={() => confirm(o.id)}><CheckCircle2 className="h-4 w-4 mr-1"/>Confirm Receipt</Button>
-              </div>
-            ))}
+        <>
+          <div className="grid lg:grid-cols-2 gap-4">
+            <Card><CardHeader><CardTitle>Incoming Deliveries</CardTitle></CardHeader><CardContent>
+              <ScrollArea className="max-h-[60vh] pr-3">
+                <div className="space-y-3">
+                  {incoming.length === 0 && <div className="text-muted-foreground text-sm">No incoming deliveries.</div>}
+                  {incoming.map(o => (
+                    <div key={o.id} className="border rounded p-3">
+                      <div className="flex justify-between"><span className="font-semibold">Delivery</span><span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span></div>
+                      {o.order_dispatches && <div className="text-xs text-muted-foreground">Driver {o.order_dispatches.driver_name} · {o.order_dispatches.plate_number}{o.order_dispatches.vehicle ? ` · ${o.order_dispatches.vehicle}` : ""}</div>}
+                      <ul className="text-sm mt-2">
+                        {o.order_items.map((it: any, i: number) => <li key={i} className="flex justify-between border-t py-1"><span>{it.materials?.name}</span><span className="font-mono">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span></li>)}
+                      </ul>
+                      {!readOnly && <Button size="sm" className="mt-3 w-full" onClick={() => confirm(o.id)}><CheckCircle2 className="h-4 w-4 mr-1"/>Confirm Receipt</Button>}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </CardContent></Card>
+
+            {!readOnly && <UsageCard siteId={activeSiteId} stock={stock} reload={loadSite} />}
+          </div>
+
+          <Card className="mt-4"><CardHeader><CardTitle>Site Stock</CardTitle></CardHeader><CardContent>
+            <ScrollArea className="max-h-[60vh]">
+              <Table>
+                <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Quantity</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {stock.map(s => <TableRow key={s.material_id}><TableCell>{s.materials?.name}</TableCell><TableCell className="font-mono">{Number(s.quantity).toFixed(2)} {s.materials?.unit}</TableCell></TableRow>)}
+                  {stock.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-6">Empty</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </ScrollArea>
           </CardContent></Card>
 
-          <UsageCard siteId={activeSiteId} stock={stock} reload={loadSite} />
-        </div>
+          <Card className="mt-4"><CardHeader><CardTitle><Wrench className="h-4 w-4 inline mr-1"/>Tools — Mark Condition</CardTitle></CardHeader><CardContent>
+            <ScrollArea className="max-h-[60vh]">
+              <Table>
+                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {tools.map(t => (
+                    <TableRow key={t.id}>
+                      <TableCell>{t.name}</TableCell>
+                      <TableCell className="font-mono">{t.quantity}</TableCell>
+                      <TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : "text-muted-foreground"}>{t.condition}</span></TableCell>
+                      <TableCell className="text-right">
+                        {!readOnly && (t.condition === "working"
+                          ? <Button size="sm" variant="outline" onClick={() => setCondition(t.id, "broken")}><AlertOctagon className="h-3 w-3 mr-1"/>Mark Broken</Button>
+                          : <Button size="sm" variant="outline" onClick={() => setCondition(t.id, "working")}><CheckCircle2 className="h-3 w-3 mr-1"/>Mark Working</Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {tools.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </CardContent></Card>
+        </>
       )}
-
-      <Card className="mt-4"><CardHeader><CardTitle>Site Stock</CardTitle></CardHeader><CardContent>
-        <Table>
-          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Quantity</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {stock.map(s => <TableRow key={s.material_id}><TableCell>{s.materials?.name}</TableCell><TableCell className="font-mono">{Number(s.quantity).toFixed(2)} {s.materials?.unit}</TableCell></TableRow>)}
-            {stock.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-6">Empty</TableCell></TableRow>}
-          </TableBody>
-        </Table>
-      </CardContent></Card>
     </AppShell>
   );
 }
