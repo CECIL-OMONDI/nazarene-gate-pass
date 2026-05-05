@@ -380,3 +380,115 @@ function UsageTab() {
     </CardContent></Card>
   );
 }
+
+function DeleteSiteButton({ site, reload }: { site: Site; reload: () => void }) {
+  const onDelete = async () => {
+    const { error } = await supabase.from("sites").delete().eq("id", site.id);
+    if (error) return toast.error(error.message);
+    toast.success("Site deleted"); reload();
+  };
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild><Button size="icon" variant="ghost"><Trash2 className="h-4 w-4 text-destructive"/></Button></AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete site "{site.name}"?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently removes the site and all its inventory, tools, workers, and order history. Are you sure you want to delete this site?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Yes, delete site</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function DeleteUserButton({ user, reload }: { user: Profile & { roles: string[] }; reload: () => void }) {
+  const onDelete = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-delete-user", { body: { user_id: user.id } });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("User deleted"); reload();
+    } catch (e) { toast.error((e as Error).message); }
+  };
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild><Button size="icon" variant="ghost"><Trash2 className="h-4 w-4 text-destructive"/></Button></AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete user "{user.full_name}"?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This removes the user account, profile, and any role assignments. Sites they are assigned to will be unassigned.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete user</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function AlertsTab() {
+  const [rows, setRows] = useState<any[]>([]);
+  const load = async () => {
+    const { data } = await supabase.from("low_stock_alerts")
+      .select("id, message, status, created_at, materials(name, unit), profiles:created_by(full_name)")
+      .order("created_at", { ascending: false });
+    setRows(data ?? []);
+  };
+  useEffect(() => { load(); }, []);
+  const resolve = async (id: string) => {
+    const { error } = await supabase.rpc("resolve_low_stock_alert", { _id: id });
+    if (error) return toast.error(error.message);
+    toast.success("Marked resolved"); load();
+  };
+  return (
+    <Card><CardHeader><CardTitle>Low-Stock Alerts from Yard</CardTitle></CardHeader><CardContent>
+      <ScrollArea className="max-h-[70vh]">
+        <Table>
+          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Message</TableHead><TableHead>Raised by</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {rows.map(r => (
+              <TableRow key={r.id}>
+                <TableCell>{r.materials?.name}</TableCell>
+                <TableCell className="text-muted-foreground">{r.message}</TableCell>
+                <TableCell>{r.profiles?.full_name}</TableCell>
+                <TableCell><span className={r.status === "open" ? "text-destructive font-medium" : "text-muted-foreground"}>{r.status}</span></TableCell>
+                <TableCell>{r.status === "open" && <Button size="sm" variant="outline" onClick={() => resolve(r.id)}>Resolve</Button>}</TableCell>
+              </TableRow>
+            ))}
+            {rows.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No alerts</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </ScrollArea>
+    </CardContent></Card>
+  );
+}
+
+function DashboardsTab() {
+  const items = [
+    { to: "/admin/yard-view", title: "Yard Storekeeper Dashboard", desc: "View pending orders, yard stock, alerts (read-only)." },
+    { to: "/admin/sitekeeper-view", title: "Site Storekeeper Dashboard", desc: "View incoming deliveries, site stock, tools (read-only)." },
+    { to: "/admin/contractor", title: "Contractor Dashboard", desc: "Browse contractor sites and details (read-only)." },
+  ];
+  return (
+    <div className="grid md:grid-cols-3 gap-4">
+      {items.map(i => (
+        <Link key={i.to} to={i.to}>
+          <Card className="hover:border-primary transition-colors cursor-pointer h-full">
+            <CardContent className="pt-6">
+              <div className="font-semibold flex items-center gap-2">{i.title}<ExternalLink className="h-4 w-4 text-muted-foreground"/></div>
+              <div className="text-sm text-muted-foreground mt-1">{i.desc}</div>
+            </CardContent>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  );
+}
