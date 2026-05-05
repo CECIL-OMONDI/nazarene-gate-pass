@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      low_stock_alerts: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          material_id: string
+          message: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          material_id: string
+          message?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          material_id?: string
+          message?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       material_receipts: {
         Row: {
           id: string
@@ -365,6 +398,7 @@ export type Database = {
       }
       tools: {
         Row: {
+          condition: Database["public"]["Enums"]["tool_condition"]
           created_at: string
           id: string
           name: string
@@ -373,6 +407,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          condition?: Database["public"]["Enums"]["tool_condition"]
           created_at?: string
           id?: string
           name: string
@@ -381,6 +416,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          condition?: Database["public"]["Enums"]["tool_condition"]
           created_at?: string
           id?: string
           name?: string
@@ -501,6 +537,11 @@ export type Database = {
       }
     }
     Functions: {
+      cancel_pending_order: { Args: { _order_id: string }; Returns: undefined }
+      create_low_stock_alert: {
+        Args: { _material_id: string; _message: string }
+        Returns: string
+      }
       current_user_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -534,6 +575,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      resolve_low_stock_alert: { Args: { _id: string }; Returns: undefined }
       restock_yard: {
         Args: {
           _material_id: string
@@ -543,10 +585,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_tool_condition: {
+        Args: {
+          _condition: Database["public"]["Enums"]["tool_condition"]
+          _tool_id: string
+        }
+        Returns: undefined
+      }
+      update_pending_order_item: {
+        Args: { _item_id: string; _new_quantity: number }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "yard_storekeeper" | "contractor" | "site_storekeeper"
       order_status: "pending" | "dispatched" | "received" | "cancelled"
+      tool_condition: "working" | "broken"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -676,6 +730,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "yard_storekeeper", "contractor", "site_storekeeper"],
       order_status: ["pending", "dispatched", "received", "cancelled"],
+      tool_condition: ["working", "broken"],
     },
   },
 } as const
