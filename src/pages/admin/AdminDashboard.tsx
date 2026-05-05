@@ -330,19 +330,22 @@ function UsersTab() {
         </DialogContent>
       </Dialog>
     </CardHeader><CardContent>
-      <Table>
-        <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Username</TableHead><TableHead>Roles</TableHead></TableRow></TableHeader>
-        <TableBody>
-          {users.map(u => (
-            <TableRow key={u.id}>
-              <TableCell className="font-medium">{u.full_name}</TableCell>
-              <TableCell className="font-mono text-sm">{u.username}</TableCell>
-              <TableCell><div className="flex flex-wrap gap-1">{u.roles.map(r => <span key={r} className="text-xs bg-muted px-2 py-0.5 rounded">{r}</span>)}</div></TableCell>
-            </TableRow>
-          ))}
-          {users.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No users yet</TableCell></TableRow>}
-        </TableBody>
-      </Table>
+      <ScrollArea className="max-h-[70vh]">
+        <Table>
+          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Username</TableHead><TableHead>Roles</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {users.map(u => (
+              <TableRow key={u.id}>
+                <TableCell className="font-medium">{u.full_name}</TableCell>
+                <TableCell className="font-mono text-sm">{u.username}</TableCell>
+                <TableCell><div className="flex flex-wrap gap-1">{u.roles.map(r => <span key={r} className="text-xs bg-muted px-2 py-0.5 rounded">{r}</span>)}</div></TableCell>
+                <TableCell><DeleteUserButton user={u} reload={load} /></TableCell>
+              </TableRow>
+            ))}
+            {users.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No users yet</TableCell></TableRow>}
+          </TableBody>
+        </Table>
+      </ScrollArea>
     </CardContent></Card>
   );
 }
