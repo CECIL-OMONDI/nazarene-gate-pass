@@ -9,8 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Package, Users, MapPin, Boxes } from "lucide-react";
+import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
 
 type Material = { id: string; name: string; unit: string; category: string | null };
 type Profile = { id: string; username: string; full_name: string };
