@@ -34,6 +34,11 @@ const App = () => (
             <Route path="/contractor" element={<RoleGuard allow={["contractor", "admin"]}><ContractorHome /></RoleGuard>} />
             <Route path="/contractor/site/:id" element={<RoleGuard allow={["contractor", "admin"]}><ContractorSiteDetail /></RoleGuard>} />
             <Route path="/sitekeeper" element={<RoleGuard allow={["site_storekeeper", "admin"]}><SiteKeeperDashboard /></RoleGuard>} />
+            {/* Admin read-only views of other dashboards */}
+            <Route path="/admin/yard-view" element={<RoleGuard allow={["admin"]}><YardDashboard readOnly /></RoleGuard>} />
+            <Route path="/admin/sitekeeper-view" element={<RoleGuard allow={["admin"]}><SiteKeeperDashboard readOnly /></RoleGuard>} />
+            <Route path="/admin/contractor" element={<RoleGuard allow={["admin"]}><ContractorHome readOnly /></RoleGuard>} />
+            <Route path="/admin/contractor/site/:id" element={<RoleGuard allow={["admin"]}><ContractorSiteDetail readOnly /></RoleGuard>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
