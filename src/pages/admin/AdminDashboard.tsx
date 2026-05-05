@@ -231,35 +231,40 @@ function SitesTab() {
         </form>
       </CardContent></Card>
       <Card className="md:col-span-2"><CardHeader><CardTitle>All Sites</CardTitle></CardHeader><CardContent>
-        <Table>
-          <TableHeader><TableRow><TableHead>Site</TableHead><TableHead>Contractor</TableHead><TableHead>Site Keeper</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {sites.map(s => (
-              <TableRow key={s.id}>
-                <TableCell><div className="font-medium">{s.name}</div><div className="text-xs text-muted-foreground">{s.location}</div></TableCell>
-                <TableCell>
-                  <Select value={s.contractor_id ?? "_none"} onValueChange={v => updateAssignment(s.id, "contractor_id", v === "_none" ? null : v)}>
-                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">— unassigned —</SelectItem>
-                      {contractors.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <Select value={s.site_keeper_id ?? "_none"} onValueChange={v => updateAssignment(s.id, "site_keeper_id", v === "_none" ? null : v)}>
-                    <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">— unassigned —</SelectItem>
-                      {keepers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-              </TableRow>
-            ))}
-            {sites.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No sites yet</TableCell></TableRow>}
-          </TableBody>
-        </Table>
+        <ScrollArea className="max-h-[70vh]">
+          <Table>
+            <TableHeader><TableRow><TableHead>Site</TableHead><TableHead>Contractor</TableHead><TableHead>Site Keeper</TableHead><TableHead></TableHead></TableRow></TableHeader>
+            <TableBody>
+              {sites.map(s => (
+                <TableRow key={s.id}>
+                  <TableCell><div className="font-medium">{s.name}</div><div className="text-xs text-muted-foreground">{s.location}</div></TableCell>
+                  <TableCell>
+                    <Select value={s.contractor_id ?? "_none"} onValueChange={v => updateAssignment(s.id, "contractor_id", v === "_none" ? null : v)}>
+                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">— unassigned —</SelectItem>
+                        {contractors.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select value={s.site_keeper_id ?? "_none"} onValueChange={v => updateAssignment(s.id, "site_keeper_id", v === "_none" ? null : v)}>
+                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">— unassigned —</SelectItem>
+                        {keepers.map(c => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <DeleteSiteButton site={s} reload={load} />
+                  </TableCell>
+                </TableRow>
+              ))}
+              {sites.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No sites yet</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </CardContent></Card>
     </div>
   );
