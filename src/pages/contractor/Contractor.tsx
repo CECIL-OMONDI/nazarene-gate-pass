@@ -90,7 +90,7 @@ export function ContractorSiteDetail({ readOnly = false }: Props) {
   const brokenTools = tools.filter(t => t.condition === "broken");
 
   return (
-    <AppShell title={site?.name ?? "Site"}>
+    <AppShell title={site?.name ?? "Site"} backTo={readOnly ? "/admin" : undefined}>
       <Link to={readOnly ? "/admin/contractor" : "/contractor"} className="text-sm text-primary hover:underline">← All sites</Link>
 
       {brokenTools.length > 0 && (
