@@ -31,16 +31,10 @@ Deno.serve(async (req) => {
       "sites","materials","signup_requests","user_roles","profiles",
     ];
     for (const t of tables) {
-      const { error } = await admin.from(t).delete().not("id","is",null).limit(100000);
-      // some tables (yard_inventory, site_inventory, workers, order_dispatches) have no id col;
-      // fall back to a broad delete
-      if (error) {
-        await admin.rpc("noop").catch(() => {});
-        // try delete by another column
-        const alt = await admin.from(t).delete().neq("created_at","1900-01-01");
-        if (alt.error) {
-          // last resort: ignore — admin SQL should have RLS bypassed
-        }
+      // Try delete by id; if no id column, fall back to created_at
+      const r1 = await admin.from(t).delete().not("id", "is", null);
+      if (r1.error) {
+        await admin.from(t).delete().not("created_at", "is", null);
       }
     }
 
