@@ -7,6 +7,7 @@ import { signOut } from "@/lib/auth";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Administrator",
+  engineer: "Engineer",
   yard_storekeeper: "Yard Storekeeper",
   contractor: "Contractor",
   site_storekeeper: "Site Storekeeper",
