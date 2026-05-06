@@ -614,6 +614,7 @@ export type Database = {
       is_site_contractor: { Args: { _site_id: string }; Returns: boolean }
       is_site_keeper: { Args: { _site_id: string }; Returns: boolean }
       is_staff_admin: { Args: { _user_id: string }; Returns: boolean }
+      lookup_login_email: { Args: { _phone: string }; Returns: string }
       receive_order: { Args: { _order_id: string }; Returns: undefined }
       record_usage: {
         Args: {
