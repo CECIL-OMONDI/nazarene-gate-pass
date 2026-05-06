@@ -156,17 +156,19 @@ function YardTab() {
         </form>
       </CardContent></Card>
       <Card className="md:col-span-2"><CardHeader><CardTitle>Yard Inventory</CardTitle></CardHeader><CardContent>
-        <Table>
-          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Qty in Yard</TableHead><TableHead>Unit</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {stock.map(s => (<TableRow key={s.material_id}>
-              <TableCell className="font-medium">{s.materials?.name}</TableCell>
-              <TableCell className="font-mono">{Number(s.quantity).toFixed(2)}</TableCell>
-              <TableCell>{s.materials?.unit}</TableCell>
-            </TableRow>))}
-            {stock.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">Yard empty</TableCell></TableRow>}
-          </TableBody>
-        </Table>
+        <ScrollArea className="max-h-[70vh]">
+          <Table>
+            <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Qty in Yard</TableHead><TableHead>Unit</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {stock.map(s => (<TableRow key={s.material_id}>
+                <TableCell className="font-medium">{s.materials?.name}</TableCell>
+                <TableCell className="font-mono">{Number(s.quantity).toFixed(2)}</TableCell>
+                <TableCell>{s.materials?.unit}</TableCell>
+              </TableRow>))}
+              {stock.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">Yard empty</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </CardContent></Card>
     </div>
   );
