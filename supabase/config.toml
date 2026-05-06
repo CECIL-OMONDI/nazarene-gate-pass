@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.bootstrap-admin]
 verify_jwt = false
+
+[functions.reset-and-seed]
+verify_jwt = false
+
+[functions.signup-request]
+verify_jwt = false
+
+[functions.approve-signup]
+verify_jwt = false
