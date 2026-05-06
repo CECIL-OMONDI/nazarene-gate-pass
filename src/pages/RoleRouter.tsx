@@ -17,7 +17,8 @@ export default function RoleRouter() {
     );
   }
   switch (role) {
-    case "admin": return <Navigate to="/admin" replace />;
+    case "admin":
+    case "engineer": return <Navigate to="/admin" replace />;
     case "yard_storekeeper": return <Navigate to="/yard" replace />;
     case "site_storekeeper": return <Navigate to="/sitekeeper" replace />;
     case "contractor": return <Navigate to="/contractor" replace />;

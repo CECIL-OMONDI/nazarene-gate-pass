@@ -16,7 +16,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
+import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink, UserCheck } from "lucide-react";
 
 type Material = { id: string; name: string; unit: string; category: string | null };
 type Profile = { id: string; username: string; full_name: string };
@@ -28,6 +28,7 @@ export default function AdminDashboard() {
       <Tabs defaultValue="overview">
         <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="overview"><Boxes className="h-4 w-4 mr-1" />Overview</TabsTrigger>
+          <TabsTrigger value="approvals"><UserCheck className="h-4 w-4 mr-1" />Approvals</TabsTrigger>
           <TabsTrigger value="yard"><Package className="h-4 w-4 mr-1" />Yard</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="sites"><MapPin className="h-4 w-4 mr-1" />Sites</TabsTrigger>
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><Overview /></TabsContent>
+        <TabsContent value="approvals"><ApprovalsTab /></TabsContent>
         <TabsContent value="yard"><YardTab /></TabsContent>
         <TabsContent value="materials"><MaterialsTab /></TabsContent>
         <TabsContent value="sites"><SitesTab /></TabsContent>
@@ -323,6 +325,7 @@ function UsersTab() {
                   <SelectItem value="contractor">Contractor</SelectItem>
                   <SelectItem value="yard_storekeeper">Yard Storekeeper</SelectItem>
                   <SelectItem value="site_storekeeper">Site Storekeeper</SelectItem>
+                  <SelectItem value="engineer">Engineer</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -502,5 +505,89 @@ function DashboardsTab() {
         </Link>
       ))}
     </div>
+  );
+}
+
+type SignupReq = {
+  id: string; full_name: string; phone: string; email: string | null;
+  requested_role: string; status: string; created_at: string; reject_reason: string | null;
+};
+
+function ApprovalsTab() {
+  const [rows, setRows] = useState<SignupReq[]>([]);
+  const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = async () => {
+    let q = supabase.from("signup_requests").select("*").order("created_at", { ascending: false });
+    if (filter === "pending") q = q.eq("status", "pending");
+    const { data } = await q;
+    setRows((data ?? []) as SignupReq[]);
+  };
+  useEffect(() => { load(); }, [filter]);
+
+  const act = async (id: string, action: "approve" | "reject", reason?: string) => {
+    setBusyId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke("approve-signup", { body: { id, action, reason } });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(action === "approve" ? "User approved" : "Request rejected");
+      load();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusyId(null); }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Pending Signup Requests</CardTitle>
+        <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <SelectTrigger className="w-40 h-8"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending">Pending only</SelectItem>
+            <SelectItem value="all">All requests</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent>
+        <ScrollArea className="max-h-[70vh]">
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead><TableHead>Phone</TableHead><TableHead>Email</TableHead>
+              <TableHead>Requested Role</TableHead><TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-medium">{r.full_name}</TableCell>
+                  <TableCell className="font-mono text-sm">{r.phone}</TableCell>
+                  <TableCell className="text-sm">{r.email ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                  <TableCell><span className="text-xs bg-muted px-2 py-0.5 rounded">{r.requested_role}</span></TableCell>
+                  <TableCell>
+                    <span className={
+                      r.status === "pending" ? "text-amber-600 font-medium" :
+                      r.status === "approved" ? "text-green-600" : "text-muted-foreground"
+                    }>{r.status}</span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {r.status === "pending" ? (
+                      <div className="flex gap-2 justify-end">
+                        <Button size="sm" disabled={busyId === r.id} onClick={() => act(r.id, "approve")}>Approve</Button>
+                        <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => act(r.id, "reject")}>Reject</Button>
+                      </div>
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {rows.length === 0 && (
+                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No requests</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }

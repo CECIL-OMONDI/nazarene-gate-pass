@@ -1,12 +1,14 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Building2, LogOut, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth, usePrimaryRole } from "@/hooks/useAuth";
 import { signOut } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Administrator",
+  engineer: "Engineer",
   yard_storekeeper: "Yard Storekeeper",
   contractor: "Contractor",
   site_storekeeper: "Site Storekeeper",
@@ -16,10 +18,15 @@ export default function AppShell({ children, title, backTo }: { children: ReactN
   const { user } = useAuth();
   const role = usePrimaryRole();
   const nav = useNavigate();
-  const handleLogout = async () => {
-    await signOut();
-    nav("/");
-  };
+  const [displayName, setDisplayName] = useState<string>("");
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
+      .then(({ data }) => setDisplayName(data?.full_name ?? user.email?.split("@")[0] ?? ""));
+  }, [user]);
+
+  const handleLogout = async () => { await signOut(); nav("/"); };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -31,7 +38,7 @@ export default function AppShell({ children, title, backTo }: { children: ReactN
           </Link>
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-medium">{user?.email?.split("@")[0]}</div>
+              <div className="text-sm font-medium">{displayName}</div>
               <div className="text-xs text-muted-foreground">{role ? ROLE_LABEL[role] : ""}</div>
             </div>
             <Button variant="ghost" size="sm" onClick={handleLogout}>

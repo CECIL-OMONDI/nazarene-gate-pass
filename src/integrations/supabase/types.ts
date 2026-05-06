@@ -288,6 +288,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          email: string | null
           full_name: string
           id: string
           phone: string | null
@@ -296,6 +297,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          email?: string | null
           full_name: string
           id: string
           phone?: string | null
@@ -304,11 +306,54 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          email?: string | null
           full_name?: string
           id?: string
           phone?: string | null
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      signup_requests: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          password: string
+          phone: string
+          reject_reason: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name: string
+          id?: string
+          password: string
+          phone: string
+          reject_reason?: string | null
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          password?: string
+          phone?: string
+          reject_reason?: string | null
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
         }
         Relationships: []
       }
@@ -568,6 +613,8 @@ export type Database = {
       }
       is_site_contractor: { Args: { _site_id: string }; Returns: boolean }
       is_site_keeper: { Args: { _site_id: string }; Returns: boolean }
+      is_staff_admin: { Args: { _user_id: string }; Returns: boolean }
+      lookup_login_email: { Args: { _phone: string }; Returns: string }
       receive_order: { Args: { _order_id: string }; Returns: undefined }
       record_usage: {
         Args: {
@@ -606,7 +653,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "yard_storekeeper" | "contractor" | "site_storekeeper"
+      app_role:
+        | "admin"
+        | "yard_storekeeper"
+        | "contractor"
+        | "site_storekeeper"
+        | "engineer"
       order_status: "pending" | "dispatched" | "received" | "cancelled"
       tool_condition: "working" | "broken"
     }
@@ -736,7 +788,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "yard_storekeeper", "contractor", "site_storekeeper"],
+      app_role: [
+        "admin",
+        "yard_storekeeper",
+        "contractor",
+        "site_storekeeper",
+        "engineer",
+      ],
       order_status: ["pending", "dispatched", "received", "cancelled"],
       tool_condition: ["working", "broken"],
     },
