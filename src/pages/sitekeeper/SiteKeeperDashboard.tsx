@@ -55,12 +55,6 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
     loadSite();
   };
 
-  const setCondition = async (toolId: string, condition: "working" | "broken") => {
-    const { error } = await supabase.rpc("set_tool_condition", { _tool_id: toolId, _condition: condition });
-    if (error) return toast.error(error.message);
-    toast.success(`Marked ${condition}`); loadSite();
-  };
-
   return (
     <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"} backTo={readOnly ? "/admin" : undefined}>
       <div className="mb-4 max-w-sm">
