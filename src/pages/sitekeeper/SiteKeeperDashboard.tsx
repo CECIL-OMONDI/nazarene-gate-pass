@@ -161,3 +161,36 @@ function UsageCard({ siteId, stock, reload }: { siteId: string; stock: any[]; re
     </CardContent></Card>
   );
 }
+
+function BrokenDialog({ tool, reload }: { tool: any; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(String(tool.broken_count ?? 0));
+  const save = async () => {
+    const n = Number(val);
+    if (!Number.isInteger(n) || n < 0 || n > tool.quantity) return toast.error(`Enter a whole number between 0 and ${tool.quantity}`);
+    const { error } = await supabase.rpc("set_tool_broken_count", { _tool_id: tool.id, _broken: n });
+    if (error) return toast.error(error.message);
+    toast.success("Updated"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setVal(String(tool.broken_count ?? 0)); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <AlertOctagon className="h-3 w-3 mr-1"/>Mark Broken
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{tool.name} — broken count</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>How many of the {tool.quantity} unit(s) are broken?</Label>
+          <Input type="number" min="0" max={tool.quantity} step="1" value={val} onChange={e=>setVal(e.target.value)} />
+          <p className="text-xs text-muted-foreground">Set to 0 to mark all working again.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
