@@ -16,7 +16,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink } from "lucide-react";
+import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink, UserCheck } from "lucide-react";
 
 type Material = { id: string; name: string; unit: string; category: string | null };
 type Profile = { id: string; username: string; full_name: string };
@@ -28,6 +28,7 @@ export default function AdminDashboard() {
       <Tabs defaultValue="overview">
         <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="overview"><Boxes className="h-4 w-4 mr-1" />Overview</TabsTrigger>
+          <TabsTrigger value="approvals"><UserCheck className="h-4 w-4 mr-1" />Approvals</TabsTrigger>
           <TabsTrigger value="yard"><Package className="h-4 w-4 mr-1" />Yard</TabsTrigger>
           <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="sites"><MapPin className="h-4 w-4 mr-1" />Sites</TabsTrigger>
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><Overview /></TabsContent>
+        <TabsContent value="approvals"><ApprovalsTab /></TabsContent>
         <TabsContent value="yard"><YardTab /></TabsContent>
         <TabsContent value="materials"><MaterialsTab /></TabsContent>
         <TabsContent value="sites"><SitesTab /></TabsContent>
@@ -323,6 +325,7 @@ function UsersTab() {
                   <SelectItem value="contractor">Contractor</SelectItem>
                   <SelectItem value="yard_storekeeper">Yard Storekeeper</SelectItem>
                   <SelectItem value="site_storekeeper">Site Storekeeper</SelectItem>
+                  <SelectItem value="engineer">Engineer</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
