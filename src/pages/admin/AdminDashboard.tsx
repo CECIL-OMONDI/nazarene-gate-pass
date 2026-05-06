@@ -450,19 +450,29 @@ function AlertsTab() {
     if (error) return toast.error(error.message);
     toast.success("Marked resolved"); load();
   };
+  const cancel = async (id: string) => {
+    const { error } = await supabase.rpc("delete_low_stock_alert", { _id: id });
+    if (error) return toast.error(error.message);
+    toast.success("Alert cancelled"); load();
+  };
   return (
     <Card><CardHeader><CardTitle>Low-Stock Alerts from Yard</CardTitle></CardHeader><CardContent>
       <ScrollArea className="max-h-[70vh]">
         <Table>
-          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Message</TableHead><TableHead>Raised by</TableHead><TableHead>Status</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Message</TableHead><TableHead>Raised by</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
           <TableBody>
             {rows.map(r => (
               <TableRow key={r.id}>
-                <TableCell>{r.materials?.name}</TableCell>
+                <TableCell className="font-medium">{r.materials?.name} {r.materials?.unit && <span className="text-xs text-muted-foreground">({r.materials.unit})</span>}</TableCell>
                 <TableCell className="text-muted-foreground">{r.message}</TableCell>
                 <TableCell>{r.profiles?.full_name}</TableCell>
                 <TableCell><span className={r.status === "open" ? "text-destructive font-medium" : "text-muted-foreground"}>{r.status}</span></TableCell>
-                <TableCell>{r.status === "open" && <Button size="sm" variant="outline" onClick={() => resolve(r.id)}>Resolve</Button>}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    {r.status === "open" && <Button size="sm" onClick={() => resolve(r.id)}>Okay</Button>}
+                    <Button size="sm" variant="outline" onClick={() => cancel(r.id)}>Cancel</Button>
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No alerts</TableCell></TableRow>}
