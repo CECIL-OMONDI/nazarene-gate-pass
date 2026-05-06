@@ -398,6 +398,7 @@ export type Database = {
       }
       tools: {
         Row: {
+          broken_count: number
           condition: Database["public"]["Enums"]["tool_condition"]
           created_at: string
           id: string
@@ -407,6 +408,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          broken_count?: number
           condition?: Database["public"]["Enums"]["tool_condition"]
           created_at?: string
           id?: string
@@ -416,6 +418,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          broken_count?: number
           condition?: Database["public"]["Enums"]["tool_condition"]
           created_at?: string
           id?: string
@@ -546,6 +549,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      delete_low_stock_alert: { Args: { _id: string }; Returns: undefined }
       dispatch_order: {
         Args: {
           _driver: string
@@ -583,6 +587,10 @@ export type Database = {
           _quantity: number
           _supplier?: string
         }
+        Returns: undefined
+      }
+      set_tool_broken_count: {
+        Args: { _broken: number; _tool_id: string }
         Returns: undefined
       }
       set_tool_condition: {
