@@ -33,7 +33,7 @@ export default function Landing() {
               BUILDING KENYA, ONE FOUNDATION AT A TIME
             </span>
             <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-4">
-              Strong Houses. <span className="text-primary">Smooth Roads.</span>
+              Your dream house <span className="text-primary">is our design.</span>
             </h1>
             <p className="text-lg md:text-xl text-secondary-foreground/80 mb-8 max-w-xl">
               Mbingo Construction is a trusted partner for residential, commercial, and infrastructure projects.
@@ -134,6 +134,7 @@ export default function Landing() {
           <div className="flex items-center gap-4 text-sm">
             <a href="#services" className="hover:text-primary">Services</a>
             <a href="#about" className="hover:text-primary">About</a>
+            <Link to="/signup" className="hover:text-primary">Sign Up</Link>
             <Link to="/login" className="hover:text-primary font-semibold underline underline-offset-4">
               Staff Portal
             </Link>
