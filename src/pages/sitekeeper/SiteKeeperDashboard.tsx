@@ -61,7 +61,7 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
   };
 
   return (
-    <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"}>
+    <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"} backTo={readOnly ? "/admin" : undefined}>
       <div className="mb-4 max-w-sm">
         <Label>Site</Label>
         <Select value={activeSiteId} onValueChange={setActiveSiteId}>
