@@ -40,7 +40,7 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
         .select("id, status, created_at, sites(name), order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
         .eq("site_id", activeSiteId).eq("status", "dispatched"),
       supabase.from("site_inventory").select("material_id, quantity, materials(id, name, unit)").eq("site_id", activeSiteId),
-      supabase.from("tools").select("id, name, quantity, condition").eq("site_id", activeSiteId).order("name"),
+      supabase.from("tools").select("id, name, quantity, condition, broken_count").eq("site_id", activeSiteId).order("name"),
     ]);
     setIncoming(o ?? []); setStock(s ?? []); setTools(t ?? []);
   };
