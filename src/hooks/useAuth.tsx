@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "admin" | "yard_storekeeper" | "contractor" | "site_storekeeper";
+export type AppRole = "admin" | "engineer" | "yard_storekeeper" | "contractor" | "site_storekeeper";
 
 type AuthCtx = {
   user: User | null;
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export const useAuth = () => useContext(Ctx);
 export const usePrimaryRole = (): AppRole | null => {
   const { roles } = useAuth();
-  const order: AppRole[] = ["admin", "yard_storekeeper", "site_storekeeper", "contractor"];
+  const order: AppRole[] = ["admin", "engineer", "yard_storekeeper", "site_storekeeper", "contractor"];
   for (const r of order) if (roles.includes(r)) return r;
   return null;
 };
