@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { signInWithUsername } from "@/lib/auth";
+import { signInWithPhone } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Building2 } from "lucide-react";
@@ -12,7 +12,7 @@ import { Building2 } from "lucide-react";
 export default function LoginPage() {
   const nav = useNavigate();
   const { user } = useAuth();
-  const [username, setUsername] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -22,7 +22,7 @@ export default function LoginPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      await signInWithUsername(username, password);
+      await signInWithPhone(phone, password);
       nav("/app");
     } catch (err) {
       toast.error((err as Error).message || "Login failed");
@@ -35,24 +35,27 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <Building2 className="h-10 w-10 text-primary mx-auto mb-2" />
           <CardTitle>Mbingo Staff Portal</CardTitle>
-          <CardDescription>Sign in with your username and password</CardDescription>
+          <CardDescription>Your dream house is our design</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2">
-              <Label>Username</Label>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus autoComplete="username" />
+              <Label>Phone Number</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} required autoFocus
+                     autoComplete="tel" placeholder="e.g. 0700604263" />
             </div>
             <div className="space-y-2">
               <Label>Password</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                     autoComplete="current-password" minLength={8} />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>{busy ? "Signing in…" : "Sign In"}</Button>
-            <div className="text-center text-sm text-muted-foreground">
-              <Link to="/" className="hover:text-primary">← Back to website</Link>
+            <div className="flex justify-between text-sm">
+              <Link to="/signup" className="text-primary hover:underline">Create account</Link>
+              <Link to="/forgot-password" className="text-muted-foreground hover:text-primary">Forgot password?</Link>
             </div>
-            <div className="text-center text-xs text-muted-foreground border-t pt-3">
-              First-time setup? <Link to="/bootstrap" className="text-primary underline">Create the first admin</Link>
+            <div className="text-center text-sm text-muted-foreground border-t pt-3">
+              <Link to="/" className="hover:text-primary">← Back to website</Link>
             </div>
           </form>
         </CardContent>
