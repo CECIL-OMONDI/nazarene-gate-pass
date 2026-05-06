@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2, LogOut } from "lucide-react";
+import { Building2, LogOut, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth, usePrimaryRole } from "@/hooks/useAuth";
 import { signOut } from "@/lib/auth";
@@ -12,7 +12,7 @@ const ROLE_LABEL: Record<string, string> = {
   site_storekeeper: "Site Storekeeper",
 };
 
-export default function AppShell({ children, title }: { children: ReactNode; title: string }) {
+export default function AppShell({ children, title, backTo }: { children: ReactNode; title: string; backTo?: string }) {
   const { user } = useAuth();
   const role = usePrimaryRole();
   const nav = useNavigate();
@@ -41,7 +41,14 @@ export default function AppShell({ children, title }: { children: ReactNode; tit
         </div>
       </header>
       <main className="flex-1 container mx-auto p-4">
-        <h1 className="text-2xl font-semibold mb-4">{title}</h1>
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <h1 className="text-2xl font-semibold">{title}</h1>
+          {backTo && (
+            <Button variant="outline" size="sm" asChild>
+              <Link to={backTo}><ArrowLeft className="h-4 w-4 mr-1" />Back to Admin</Link>
+            </Button>
+          )}
+        </div>
         {children}
       </main>
     </div>
