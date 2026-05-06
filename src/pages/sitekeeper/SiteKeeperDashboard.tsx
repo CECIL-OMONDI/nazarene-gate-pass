@@ -110,22 +110,20 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
           <Card className="mt-4"><CardHeader><CardTitle><Wrench className="h-4 w-4 inline mr-1"/>Tools — Mark Condition</CardTitle></CardHeader><CardContent>
             <ScrollArea className="max-h-[60vh]">
               <Table>
-                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Broken</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {tools.map(t => (
                     <TableRow key={t.id}>
                       <TableCell>{t.name}</TableCell>
                       <TableCell className="font-mono">{t.quantity}</TableCell>
+                      <TableCell className="font-mono">{t.broken_count ?? 0}</TableCell>
                       <TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : "text-muted-foreground"}>{t.condition}</span></TableCell>
                       <TableCell className="text-right">
-                        {!readOnly && (t.condition === "working"
-                          ? <Button size="sm" variant="outline" onClick={() => setCondition(t.id, "broken")}><AlertOctagon className="h-3 w-3 mr-1"/>Mark Broken</Button>
-                          : <Button size="sm" variant="outline" onClick={() => setCondition(t.id, "working")}><CheckCircle2 className="h-3 w-3 mr-1"/>Mark Working</Button>
-                        )}
+                        {!readOnly && <BrokenDialog tool={t} reload={loadSite} />}
                       </TableCell>
                     </TableRow>
                   ))}
-                  {tools.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
+                  {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </ScrollArea>
