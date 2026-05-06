@@ -46,7 +46,7 @@ export default function YardDashboard({ readOnly = false }: Props) {
   useEffect(() => { load(); }, []);
 
   return (
-    <AppShell title={readOnly ? "Yard Storekeeper (View Only)" : "Yard Storekeeper"}>
+    <AppShell title={readOnly ? "Yard Storekeeper (View Only)" : "Yard Storekeeper"} backTo={readOnly ? "/admin" : undefined}>
       <Tabs defaultValue="orders">
         <TabsList className="mb-4">
           <TabsTrigger value="orders">Orders</TabsTrigger>

@@ -26,7 +26,7 @@ export function ContractorHome({ readOnly = false }: Props) {
     q.then(({ data }) => setSites(data ?? []));
   }, [user, readOnly]);
   return (
-    <AppShell title={readOnly ? "Contractor Sites (View Only)" : "My Sites"}>
+    <AppShell title={readOnly ? "Contractor Sites (View Only)" : "My Sites"} backTo={readOnly ? "/admin" : undefined}>
       {sites.length === 0 && <div className="text-muted-foreground">No sites.</div>}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {sites.map(s => (
@@ -90,7 +90,7 @@ export function ContractorSiteDetail({ readOnly = false }: Props) {
   const brokenTools = tools.filter(t => t.condition === "broken");
 
   return (
-    <AppShell title={site?.name ?? "Site"}>
+    <AppShell title={site?.name ?? "Site"} backTo={readOnly ? "/admin" : undefined}>
       <Link to={readOnly ? "/admin/contractor" : "/contractor"} className="text-sm text-primary hover:underline">← All sites</Link>
 
       {brokenTools.length > 0 && (

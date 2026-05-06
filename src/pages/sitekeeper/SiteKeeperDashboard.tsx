@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { CheckCircle2, MinusCircle, Wrench, AlertOctagon } from "lucide-react";
 
@@ -39,7 +40,7 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
         .select("id, status, created_at, sites(name), order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
         .eq("site_id", activeSiteId).eq("status", "dispatched"),
       supabase.from("site_inventory").select("material_id, quantity, materials(id, name, unit)").eq("site_id", activeSiteId),
-      supabase.from("tools").select("id, name, quantity, condition").eq("site_id", activeSiteId).order("name"),
+      supabase.from("tools").select("id, name, quantity, condition, broken_count").eq("site_id", activeSiteId).order("name"),
     ]);
     setIncoming(o ?? []); setStock(s ?? []); setTools(t ?? []);
   };
@@ -54,14 +55,8 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
     loadSite();
   };
 
-  const setCondition = async (toolId: string, condition: "working" | "broken") => {
-    const { error } = await supabase.rpc("set_tool_condition", { _tool_id: toolId, _condition: condition });
-    if (error) return toast.error(error.message);
-    toast.success(`Marked ${condition}`); loadSite();
-  };
-
   return (
-    <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"}>
+    <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"} backTo={readOnly ? "/admin" : undefined}>
       <div className="mb-4 max-w-sm">
         <Label>Site</Label>
         <Select value={activeSiteId} onValueChange={setActiveSiteId}>
@@ -109,22 +104,20 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
           <Card className="mt-4"><CardHeader><CardTitle><Wrench className="h-4 w-4 inline mr-1"/>Tools — Mark Condition</CardTitle></CardHeader><CardContent>
             <ScrollArea className="max-h-[60vh]">
               <Table>
-                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Broken</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {tools.map(t => (
                     <TableRow key={t.id}>
                       <TableCell>{t.name}</TableCell>
                       <TableCell className="font-mono">{t.quantity}</TableCell>
+                      <TableCell className="font-mono">{t.broken_count ?? 0}</TableCell>
                       <TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : "text-muted-foreground"}>{t.condition}</span></TableCell>
                       <TableCell className="text-right">
-                        {!readOnly && (t.condition === "working"
-                          ? <Button size="sm" variant="outline" onClick={() => setCondition(t.id, "broken")}><AlertOctagon className="h-3 w-3 mr-1"/>Mark Broken</Button>
-                          : <Button size="sm" variant="outline" onClick={() => setCondition(t.id, "working")}><CheckCircle2 className="h-3 w-3 mr-1"/>Mark Working</Button>
-                        )}
+                        {!readOnly && <BrokenDialog tool={t} reload={loadSite} />}
                       </TableCell>
                     </TableRow>
                   ))}
-                  {tools.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
+                  {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </ScrollArea>
@@ -160,5 +153,38 @@ function UsageCard({ siteId, stock, reload }: { siteId: string; stock: any[]; re
         <Button className="w-full"><MinusCircle className="h-4 w-4 mr-1"/>Record Usage</Button>
       </form>
     </CardContent></Card>
+  );
+}
+
+function BrokenDialog({ tool, reload }: { tool: any; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(String(tool.broken_count ?? 0));
+  const save = async () => {
+    const n = Number(val);
+    if (!Number.isInteger(n) || n < 0 || n > tool.quantity) return toast.error(`Enter a whole number between 0 and ${tool.quantity}`);
+    const { error } = await supabase.rpc("set_tool_broken_count", { _tool_id: tool.id, _broken: n });
+    if (error) return toast.error(error.message);
+    toast.success("Updated"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setVal(String(tool.broken_count ?? 0)); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <AlertOctagon className="h-3 w-3 mr-1"/>Mark Broken
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{tool.name} — broken count</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>How many of the {tool.quantity} unit(s) are broken?</Label>
+          <Input type="number" min="0" max={tool.quantity} step="1" value={val} onChange={e=>setVal(e.target.value)} />
+          <p className="text-xs text-muted-foreground">Set to 0 to mark all working again.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
