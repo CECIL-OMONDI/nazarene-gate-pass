@@ -47,7 +47,7 @@ export default function AppShell({ children, title, backTo }: { children: ReactN
           </div>
         </div>
       </header>
-      <main className="flex-1 w-full container mx-auto p-3 sm:p-4 overflow-x-hidden">
+      <main className="flex-1 w-full container mx-auto p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <h1 className="text-xl sm:text-2xl font-semibold">{title}</h1>
           {backTo && (
