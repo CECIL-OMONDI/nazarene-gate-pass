@@ -26,17 +26,19 @@ export default function AdminDashboard() {
   return (
     <AppShell title="Administrator Dashboard">
       <Tabs defaultValue="overview">
-        <TabsList className="mb-4 flex-wrap h-auto">
-          <TabsTrigger value="overview"><Boxes className="h-4 w-4 mr-1" />Overview</TabsTrigger>
-          <TabsTrigger value="approvals"><UserCheck className="h-4 w-4 mr-1" />Approvals</TabsTrigger>
-          <TabsTrigger value="yard"><Package className="h-4 w-4 mr-1" />Yard</TabsTrigger>
-          <TabsTrigger value="materials">Materials</TabsTrigger>
-          <TabsTrigger value="sites"><MapPin className="h-4 w-4 mr-1" />Sites</TabsTrigger>
-          <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users</TabsTrigger>
-          <TabsTrigger value="usage">Site Usage</TabsTrigger>
-          <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Alerts</TabsTrigger>
-          <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
-        </TabsList>
+        <div className="mb-4 -mx-3 sm:mx-0 px-3 sm:px-0 overflow-x-auto">
+          <TabsList className="inline-flex w-max">
+            <TabsTrigger value="overview"><Boxes className="h-4 w-4 mr-1" />Overview</TabsTrigger>
+            <TabsTrigger value="approvals"><UserCheck className="h-4 w-4 mr-1" />Approvals</TabsTrigger>
+            <TabsTrigger value="yard"><Package className="h-4 w-4 mr-1" />Yard</TabsTrigger>
+            <TabsTrigger value="materials">Materials</TabsTrigger>
+            <TabsTrigger value="sites"><MapPin className="h-4 w-4 mr-1" />Sites</TabsTrigger>
+            <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users</TabsTrigger>
+            <TabsTrigger value="usage">Site Usage</TabsTrigger>
+            <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Alerts</TabsTrigger>
+            <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="overview"><Overview /></TabsContent>
         <TabsContent value="approvals"><ApprovalsTab /></TabsContent>
         <TabsContent value="yard"><YardTab /></TabsContent>
