@@ -30,26 +30,26 @@ export default function AppShell({ children, title, backTo }: { children: ReactN
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b bg-card">
-        <div className="container mx-auto flex items-center justify-between py-3 px-4">
-          <Link to="/app" className="flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" />
-            <span className="font-semibold">Mbingo Construction</span>
+      <header className="border-b bg-card sticky top-0 z-20">
+        <div className="container mx-auto flex items-center justify-between gap-2 py-3 px-3 sm:px-4">
+          <Link to="/app" className="flex items-center gap-2 min-w-0">
+            <Building2 className="h-6 w-6 shrink-0 text-primary" />
+            <span className="font-semibold text-sm sm:text-base truncate">Mbingo Construction</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-medium">{displayName}</div>
+              <div className="text-sm font-medium truncate max-w-[160px]">{displayName}</div>
               <div className="text-xs text-muted-foreground">{role ? ROLE_LABEL[role] : ""}</div>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1" /> Logout
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="px-2">
+              <LogOut className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
       </header>
-      <main className="flex-1 container mx-auto p-4">
+      <main className="flex-1 w-full container mx-auto p-3 sm:p-4">
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-          <h1 className="text-2xl font-semibold">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold">{title}</h1>
           {backTo && (
             <Button variant="outline" size="sm" asChild>
               <Link to={backTo}><ArrowLeft className="h-4 w-4 mr-1" />Back to Admin</Link>

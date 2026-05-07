@@ -48,12 +48,14 @@ export default function YardDashboard({ readOnly = false }: Props) {
   return (
     <AppShell title={readOnly ? "Yard Storekeeper (View Only)" : "Yard Storekeeper"} backTo={readOnly ? "/admin" : undefined}>
       <Tabs defaultValue="orders">
-        <TabsList className="mb-4">
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="yard">Yard Stock</TabsTrigger>
-          <TabsTrigger value="sites"><Eye className="h-4 w-4 mr-1"/>Site Stock & Tools</TabsTrigger>
-          <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Low-Stock Alerts</TabsTrigger>
-        </TabsList>
+        <div className="mb-4 -mx-3 sm:mx-0 px-3 sm:px-0 overflow-x-auto">
+          <TabsList className="inline-flex w-max">
+            <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="yard">Yard Stock</TabsTrigger>
+            <TabsTrigger value="sites"><Eye className="h-4 w-4 mr-1"/>Site Stock & Tools</TabsTrigger>
+            <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Low-Stock Alerts</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="orders">
           <Card><CardHeader><CardTitle>Pending Orders</CardTitle></CardHeader><CardContent>
