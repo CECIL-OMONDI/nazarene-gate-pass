@@ -36,6 +36,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users</TabsTrigger>
             <TabsTrigger value="usage">Site Usage</TabsTrigger>
             <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Alerts</TabsTrigger>
+            <TabsTrigger value="reports"><BarChart3 className="h-4 w-4 mr-1"/>Reports</TabsTrigger>
             <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
           </TabsList>
         </div>
