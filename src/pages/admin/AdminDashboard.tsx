@@ -18,7 +18,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink, UserCheck, FileDown, BarChart3 } from "lucide-react";
 
-type Material = { id: string; name: string; unit: string; category: string | null };
+type Material = { id: string; name: string; unit: string; category: string | null; reorder_level?: number; unit_price?: number };
 type Profile = { id: string; username: string; full_name: string };
 type Site = { id: string; name: string; location: string | null; contractor_id: string | null; site_keeper_id: string | null; is_active: boolean };
 
