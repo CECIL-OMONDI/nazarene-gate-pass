@@ -15,7 +15,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Truck, Trash2, Pencil, AlertTriangle, Eye } from "lucide-react";
+import { Truck, Trash2, Pencil, AlertTriangle, Eye, XCircle, Search } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = { readOnly?: boolean };
 
