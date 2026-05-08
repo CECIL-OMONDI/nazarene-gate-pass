@@ -73,7 +73,7 @@ export function ContractorSiteDetail({ readOnly = false }: Props) {
     setYard(y ?? []);
     const { data: o } = await supabase
       .from("orders")
-      .select("id, status, created_at, order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number)")
+      .select("id, status, created_at, reject_reason, delivery_notes, order_items(quantity, dispatched_qty, materials(name, unit)), order_dispatches(driver_name, plate_number)")
       .eq("site_id", id).neq("status", "received").order("created_at", { ascending: false });
     setOrders(o ?? []);
     const { data: m } = await supabase.from("materials").select("*").order("name");
