@@ -38,23 +38,16 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
     if (!activeSiteId) return;
     const [{ data: o }, { data: s }, { data: t }] = await Promise.all([
       supabase.from("orders")
-        .select("id, status, created_at, sites(name), order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
-        .eq("site_id", activeSiteId).eq("status", "dispatched"),
+        .select("id, status, created_at, delivery_notes, sites(name), order_items(quantity, dispatched_qty, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
+        .eq("site_id", activeSiteId).in("status", ["dispatched", "partially_dispatched"]),
       supabase.from("site_inventory").select("material_id, quantity, materials(id, name, unit)").eq("site_id", activeSiteId),
-      supabase.from("tools").select("id, name, quantity, condition, broken_count").eq("site_id", activeSiteId).order("name"),
+      supabase.from("tools").select("id, name, quantity, condition, broken_count, under_repair_count").eq("site_id", activeSiteId).order("name"),
     ]);
     setIncoming(o ?? []); setStock(s ?? []); setTools(t ?? []);
   };
 
   useEffect(() => { loadSites(); }, [user]);
   useEffect(() => { loadSite(); }, [activeSiteId]);
-
-  const confirm = async (id: string) => {
-    const { error } = await supabase.rpc("receive_order", { _order_id: id });
-    if (error) return toast.error(error.message);
-    toast.success("Order received and added to site stock");
-    loadSite();
-  };
 
   return (
     <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"} backTo={readOnly ? "/admin" : undefined}>
