@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { CheckCircle2, MinusCircle, Wrench, AlertOctagon } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = { readOnly?: boolean };
 
