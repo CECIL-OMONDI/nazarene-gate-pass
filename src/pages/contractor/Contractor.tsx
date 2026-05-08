@@ -153,14 +153,24 @@ export function ContractorSiteDetail({ readOnly = false }: Props) {
             <div className="space-y-3">
               {orders.length === 0 && <div className="text-muted-foreground text-sm">No open orders</div>}
               {orders.map(o => (
-                <div key={o.id} className="border rounded p-3">
+                <div key={o.id} className={`border rounded p-3 ${o.status === "rejected" ? "border-destructive/50 bg-destructive/5" : ""}`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs uppercase tracking-wider px-2 py-0.5 rounded bg-muted">{o.status}</span>
+                    <span className={`text-xs uppercase tracking-wider px-2 py-0.5 rounded ${o.status === "rejected" ? "bg-destructive text-destructive-foreground" : o.status === "partially_dispatched" ? "bg-amber-500/30 text-amber-800" : "bg-muted"}`}>{o.status}</span>
                     <span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span>
                   </div>
+                  {o.reject_reason && <div className="text-sm mt-1 text-destructive">Rejected: {o.reject_reason}</div>}
                   <ul className="text-sm mt-2">
-                    {o.order_items.map((it: any, i: number) => <li key={i} className="flex justify-between border-t py-1"><span>{it.materials?.name}</span><span className="font-mono">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span></li>)}
+                    {o.order_items.map((it: any, i: number) => {
+                      const sent = it.dispatched_qty;
+                      return <li key={i} className="flex justify-between border-t py-1">
+                        <span>{it.materials?.name}</span>
+                        <span className="font-mono">{sent != null && Number(sent) !== Number(it.quantity)
+                          ? `${Number(sent).toFixed(2)} of ${Number(it.quantity).toFixed(2)}`
+                          : Number(it.quantity).toFixed(2)} {it.materials?.unit}</span>
+                      </li>;
+                    })}
                   </ul>
+                  {o.delivery_notes && <div className="text-xs italic text-muted-foreground mt-2">Note: {o.delivery_notes}</div>}
                   {o.order_dispatches && <div className="text-xs text-muted-foreground mt-2">In transit · Driver {o.order_dispatches.driver_name} · {o.order_dispatches.plate_number}</div>}
                 </div>
               ))}
