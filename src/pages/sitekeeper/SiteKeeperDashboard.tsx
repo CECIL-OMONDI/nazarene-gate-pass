@@ -198,3 +198,68 @@ function BrokenDialog({ tool, reload }: { tool: any; reload: () => void }) {
     </Dialog>
   );
 }
+
+function ReceiveDialog({ orderId, reload }: { orderId: string; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    const { error } = await supabase.rpc("receive_order_v2" as any, { _order_id: orderId, _notes: notes || null });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Receipt confirmed"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="mt-3 w-full"><CheckCircle2 className="h-4 w-4 mr-1"/>Confirm Receipt</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Confirm receipt at site</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>Notes (proof of delivery, condition, missing items…)</Label>
+          <Textarea rows={3} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Optional" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={busy}>{busy?"Saving…":"Confirm Receipt"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RepairDialog({ tool, mode, reload }: { tool: any; mode: "send" | "back"; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const max = mode === "send" ? tool.broken_count : tool.under_repair_count;
+  const [val, setVal] = useState("1");
+  const submit = async () => {
+    const n = Number(val);
+    if (!Number.isInteger(n) || n < 1 || n > max) return toast.error(`Enter 1..${max}`);
+    const rpc = mode === "send" ? "send_tool_for_repair" : "tool_repaired";
+    const { error } = await supabase.rpc(rpc as any, { _tool_id: tool.id, _count: n });
+    if (error) return toast.error(error.message);
+    toast.success(mode === "send" ? "Sent for repair" : "Marked repaired"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={(o)=>{ setOpen(o); if (o) setVal("1"); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant={mode === "send" ? "outline" : "default"}>
+          <Wrench className="h-3 w-3 mr-1"/>{mode === "send" ? "Send to Repair" : "Mark Repaired"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{tool.name} — {mode === "send" ? "send broken units to repair" : "mark repaired"}</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>Count (max {max})</Label>
+          <Input type="number" min="1" max={max} step="1" value={val} onChange={e=>setVal(e.target.value)} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
+          <Button onClick={submit}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
