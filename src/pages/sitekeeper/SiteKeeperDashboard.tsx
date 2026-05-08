@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { CheckCircle2, MinusCircle, Wrench, AlertOctagon } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 type Props = { readOnly?: boolean };
 
@@ -37,23 +38,16 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
     if (!activeSiteId) return;
     const [{ data: o }, { data: s }, { data: t }] = await Promise.all([
       supabase.from("orders")
-        .select("id, status, created_at, sites(name), order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
-        .eq("site_id", activeSiteId).eq("status", "dispatched"),
+        .select("id, status, created_at, delivery_notes, sites(name), order_items(quantity, dispatched_qty, materials(name, unit)), order_dispatches(driver_name, plate_number, vehicle)")
+        .eq("site_id", activeSiteId).in("status", ["dispatched", "partially_dispatched"]),
       supabase.from("site_inventory").select("material_id, quantity, materials(id, name, unit)").eq("site_id", activeSiteId),
-      supabase.from("tools").select("id, name, quantity, condition, broken_count").eq("site_id", activeSiteId).order("name"),
+      supabase.from("tools").select("id, name, quantity, condition, broken_count, under_repair_count").eq("site_id", activeSiteId).order("name"),
     ]);
     setIncoming(o ?? []); setStock(s ?? []); setTools(t ?? []);
   };
 
   useEffect(() => { loadSites(); }, [user]);
   useEffect(() => { loadSite(); }, [activeSiteId]);
-
-  const confirm = async (id: string) => {
-    const { error } = await supabase.rpc("receive_order", { _order_id: id });
-    if (error) return toast.error(error.message);
-    toast.success("Order received and added to site stock");
-    loadSite();
-  };
 
   return (
     <AppShell title={readOnly ? "Site Storekeeper (View Only)" : "Site Storekeeper"} backTo={readOnly ? "/admin" : undefined}>
@@ -74,12 +68,23 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
                   {incoming.length === 0 && <div className="text-muted-foreground text-sm">No incoming deliveries.</div>}
                   {incoming.map(o => (
                     <div key={o.id} className="border rounded p-3">
-                      <div className="flex justify-between"><span className="font-semibold">Delivery</span><span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span></div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Delivery {o.status === "partially_dispatched" && <span className="text-xs ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700">partial</span>}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span>
+                      </div>
                       {o.order_dispatches && <div className="text-xs text-muted-foreground">Driver {o.order_dispatches.driver_name} · {o.order_dispatches.plate_number}{o.order_dispatches.vehicle ? ` · ${o.order_dispatches.vehicle}` : ""}</div>}
+                      {o.delivery_notes && <div className="text-xs italic mt-1">"{o.delivery_notes}"</div>}
                       <ul className="text-sm mt-2">
-                        {o.order_items.map((it: any, i: number) => <li key={i} className="flex justify-between border-t py-1"><span>{it.materials?.name}</span><span className="font-mono">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span></li>)}
+                        {o.order_items.map((it: any, i: number) => {
+                          const sent = it.dispatched_qty ?? it.quantity;
+                          const short = Number(sent) < Number(it.quantity);
+                          return <li key={i} className="flex justify-between border-t py-1">
+                            <span>{it.materials?.name}{short && <span className="text-xs text-amber-700 ml-1">(of {Number(it.quantity)})</span>}</span>
+                            <span className="font-mono">{Number(sent).toFixed(2)} {it.materials?.unit}</span>
+                          </li>;
+                        })}
                       </ul>
-                      {!readOnly && <Button size="sm" className="mt-3 w-full" onClick={() => confirm(o.id)}><CheckCircle2 className="h-4 w-4 mr-1"/>Confirm Receipt</Button>}
+                      {!readOnly && <ReceiveDialog orderId={o.id} reload={loadSite} />}
                     </div>
                   ))}
                 </div>
@@ -101,23 +106,28 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
             </ScrollArea>
           </CardContent></Card>
 
-          <Card className="mt-4"><CardHeader><CardTitle><Wrench className="h-4 w-4 inline mr-1"/>Tools — Mark Condition</CardTitle></CardHeader><CardContent>
+          <Card className="mt-4"><CardHeader><CardTitle><Wrench className="h-4 w-4 inline mr-1"/>Tools — Condition & Repair</CardTitle></CardHeader><CardContent>
             <ScrollArea className="max-h-[60vh]">
               <Table>
-                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Broken</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Broken</TableHead><TableHead>In repair</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {tools.map(t => (
                     <TableRow key={t.id}>
                       <TableCell>{t.name}</TableCell>
                       <TableCell className="font-mono">{t.quantity}</TableCell>
                       <TableCell className="font-mono">{t.broken_count ?? 0}</TableCell>
-                      <TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : "text-muted-foreground"}>{t.condition}</span></TableCell>
+                      <TableCell className="font-mono">{t.under_repair_count ?? 0}</TableCell>
+                      <TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : t.condition === "under_repair" ? "text-amber-600" : "text-muted-foreground"}>{t.condition}</span></TableCell>
                       <TableCell className="text-right">
-                        {!readOnly && <BrokenDialog tool={t} reload={loadSite} />}
+                        {!readOnly && <div className="flex gap-1 justify-end flex-wrap">
+                          <BrokenDialog tool={t} reload={loadSite} />
+                          {t.broken_count > 0 && <RepairDialog tool={t} mode="send" reload={loadSite} />}
+                          {t.under_repair_count > 0 && <RepairDialog tool={t} mode="back" reload={loadSite} />}
+                        </div>}
                       </TableCell>
                     </TableRow>
                   ))}
-                  {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
+                  {tools.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </ScrollArea>
@@ -183,6 +193,71 @@ function BrokenDialog({ tool, reload }: { tool: any; reload: () => void }) {
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
           <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ReceiveDialog({ orderId, reload }: { orderId: string; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    setBusy(true);
+    const { error } = await supabase.rpc("receive_order_v2" as any, { _order_id: orderId, _notes: notes || null });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Receipt confirmed"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="mt-3 w-full"><CheckCircle2 className="h-4 w-4 mr-1"/>Confirm Receipt</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Confirm receipt at site</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>Notes (proof of delivery, condition, missing items…)</Label>
+          <Textarea rows={3} value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Optional" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
+          <Button onClick={submit} disabled={busy}>{busy?"Saving…":"Confirm Receipt"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RepairDialog({ tool, mode, reload }: { tool: any; mode: "send" | "back"; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const max = mode === "send" ? tool.broken_count : tool.under_repair_count;
+  const [val, setVal] = useState("1");
+  const submit = async () => {
+    const n = Number(val);
+    if (!Number.isInteger(n) || n < 1 || n > max) return toast.error(`Enter 1..${max}`);
+    const rpc = mode === "send" ? "send_tool_for_repair" : "tool_repaired";
+    const { error } = await supabase.rpc(rpc as any, { _tool_id: tool.id, _count: n });
+    if (error) return toast.error(error.message);
+    toast.success(mode === "send" ? "Sent for repair" : "Marked repaired"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={(o)=>{ setOpen(o); if (o) setVal("1"); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant={mode === "send" ? "outline" : "default"}>
+          <Wrench className="h-3 w-3 mr-1"/>{mode === "send" ? "Send to Repair" : "Mark Repaired"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{tool.name} — {mode === "send" ? "send broken units to repair" : "mark repaired"}</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>Count (max {max})</Label>
+          <Input type="number" min="1" max={max} step="1" value={val} onChange={e=>setVal(e.target.value)} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
+          <Button onClick={submit}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

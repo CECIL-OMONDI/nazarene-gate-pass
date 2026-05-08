@@ -16,9 +16,9 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink, UserCheck } from "lucide-react";
+import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink, UserCheck, FileDown, BarChart3 } from "lucide-react";
 
-type Material = { id: string; name: string; unit: string; category: string | null };
+type Material = { id: string; name: string; unit: string; category: string | null; reorder_level?: number; unit_price?: number };
 type Profile = { id: string; username: string; full_name: string };
 type Site = { id: string; name: string; location: string | null; contractor_id: string | null; site_keeper_id: string | null; is_active: boolean };
 
@@ -36,6 +36,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users</TabsTrigger>
             <TabsTrigger value="usage">Site Usage</TabsTrigger>
             <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Alerts</TabsTrigger>
+            <TabsTrigger value="reports"><BarChart3 className="h-4 w-4 mr-1"/>Reports</TabsTrigger>
             <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
           </TabsList>
         </div>
@@ -47,6 +48,7 @@ export default function AdminDashboard() {
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="usage"><UsageTab /></TabsContent>
         <TabsContent value="alerts"><AlertsTab /></TabsContent>
+        <TabsContent value="reports"><ReportsTab /></TabsContent>
         <TabsContent value="dashboards"><DashboardsTab /></TabsContent>
       </Tabs>
     </AppShell>
@@ -87,6 +89,8 @@ function Overview() {
 function MaterialsTab() {
   const [list, setList] = useState<Material[]>([]);
   const [name, setName] = useState(""); const [unit, setUnit] = useState(""); const [cat, setCat] = useState("");
+  const [reorder, setReorder] = useState(""); const [price, setPrice] = useState("");
+  const [search, setSearch] = useState("");
   const load = async () => {
     const { data } = await supabase.from("materials").select("*").order("name");
     setList((data ?? []) as Material[]);
@@ -94,28 +98,124 @@ function MaterialsTab() {
   useEffect(() => { load(); }, []);
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { error } = await supabase.from("materials").insert({ name, unit, category: cat || null });
+    const { error } = await supabase.from("materials").insert({
+      name, unit, category: cat || null,
+      reorder_level: Number(reorder) || 0,
+      unit_price: Number(price) || 0,
+    } as any);
     if (error) return toast.error(error.message);
-    toast.success("Material added"); setName(""); setUnit(""); setCat(""); load();
+    toast.success("Material added"); setName(""); setUnit(""); setCat(""); setReorder(""); setPrice(""); load();
   };
+  const updateField = async (id: string, field: "reorder_level" | "unit_price", value: number) => {
+    const { error } = await supabase.from("materials").update({ [field]: value } as any).eq("id", id);
+    if (error) return toast.error(error.message);
+    load();
+  };
+  const filtered = list.filter(m => !search || m.name.toLowerCase().includes(search.toLowerCase()));
   return (
     <div className="grid md:grid-cols-3 gap-4">
       <Card className="md:col-span-1"><CardHeader><CardTitle>Add Material</CardTitle></CardHeader><CardContent>
         <form onSubmit={add} className="space-y-3">
-          <div><Label>Name</Label><Input value={name} onChange={e=>setName(e.target.value)} required placeholder="e.g. Cement, Steel T12" /></div>
-          <div><Label>Unit</Label><Input value={unit} onChange={e=>setUnit(e.target.value)} required placeholder="e.g. bag, m, pc" /></div>
-          <div><Label>Category</Label><Input value={cat} onChange={e=>setCat(e.target.value)} placeholder="e.g. Steel" /></div>
+          <div><Label>Name</Label><Input value={name} onChange={e=>setName(e.target.value)} required placeholder="e.g. Cement" /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Unit</Label><Input value={unit} onChange={e=>setUnit(e.target.value)} required placeholder="bag, m, pc" /></div>
+            <div><Label>Category</Label><Input value={cat} onChange={e=>setCat(e.target.value)} placeholder="Steel" /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Reorder ≤</Label><Input type="number" min="0" step="0.01" value={reorder} onChange={e=>setReorder(e.target.value)} placeholder="auto-alert" /></div>
+            <div><Label>Unit Price (KES)</Label><Input type="number" min="0" step="0.01" value={price} onChange={e=>setPrice(e.target.value)} /></div>
+          </div>
           <Button className="w-full"><Plus className="h-4 w-4 mr-1"/>Add</Button>
         </form>
       </CardContent></Card>
-      <Card className="md:col-span-2"><CardHeader><CardTitle>Material Catalog</CardTitle></CardHeader><CardContent>
+      <Card className="md:col-span-2"><CardHeader className="flex-row items-center justify-between gap-2">
+        <CardTitle>Material Catalog</CardTitle>
+        <Input placeholder="Search…" value={search} onChange={e=>setSearch(e.target.value)} className="w-48 h-9" />
+      </CardHeader><CardContent>
+        <ScrollArea className="max-h-[70vh]">
+          <Table>
+            <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Unit</TableHead><TableHead>Reorder ≤</TableHead><TableHead>Price</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {filtered.map(m => (<TableRow key={m.id}>
+                <TableCell className="font-medium">{m.name}<div className="text-xs text-muted-foreground">{m.category}</div></TableCell>
+                <TableCell>{m.unit}</TableCell>
+                <TableCell><Input className="h-7 w-20" type="number" min="0" step="0.01" defaultValue={m.reorder_level ?? 0} onBlur={e => { const v = Number(e.target.value); if (v !== (m.reorder_level ?? 0)) updateField(m.id, "reorder_level", v); }} /></TableCell>
+                <TableCell><Input className="h-7 w-24" type="number" min="0" step="0.01" defaultValue={m.unit_price ?? 0} onBlur={e => { const v = Number(e.target.value); if (v !== (m.unit_price ?? 0)) updateField(m.id, "unit_price", v); }} /></TableCell>
+              </TableRow>))}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No materials</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </CardContent></Card>
+    </div>
+  );
+}
+
+function downloadCSV(filename: string, rows: any[]) {
+  if (rows.length === 0) { toast.info("No data to export"); return; }
+  const headers = Object.keys(rows[0]);
+  const escape = (v: any) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const csv = [headers.join(","), ...rows.map(r => headers.map(h => escape(r[h])).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function ReportsTab() {
+  const [spend, setSpend] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  useEffect(() => {
+    (async () => {
+      const { data: usage } = await supabase
+        .from("v_site_material_usage_totals")
+        .select("site_id, material_id, total_used, sites(name), materials(name, unit, unit_price)");
+      const agg: Record<string, { site: string; total_kes: number; lines: number }> = {};
+      const detail: any[] = [];
+      (usage ?? []).forEach((u: any) => {
+        const price = Number(u.materials?.unit_price ?? 0);
+        const cost = Number(u.total_used) * price;
+        agg[u.site_id] ??= { site: u.sites?.name ?? "—", total_kes: 0, lines: 0 };
+        agg[u.site_id].total_kes += cost; agg[u.site_id].lines += 1;
+        detail.push({ site: u.sites?.name, material: u.materials?.name, unit: u.materials?.unit,
+          total_used: Number(u.total_used).toFixed(2), unit_price: price.toFixed(2), cost_kes: cost.toFixed(2) });
+      });
+      setSpend(Object.values(agg).map(a => ({ site: a.site, total_kes: a.total_kes.toFixed(2), materials: a.lines })));
+
+      const { data: ord } = await supabase.from("orders")
+        .select("id, status, created_at, reject_reason, sites(name), profiles:contractor_id(full_name), order_items(quantity, dispatched_qty, materials(name, unit, unit_price))")
+        .order("created_at", { ascending: false }).limit(500);
+      const ordCsv = (ord ?? []).flatMap((o: any) => o.order_items.map((it: any) => ({
+        order_id: o.id, status: o.status, created_at: o.created_at,
+        site: o.sites?.name, contractor: o.profiles?.full_name,
+        material: it.materials?.name, unit: it.materials?.unit,
+        requested: it.quantity, dispatched: it.dispatched_qty ?? "",
+        unit_price: it.materials?.unit_price ?? 0,
+        line_cost: ((it.dispatched_qty ?? it.quantity) * Number(it.materials?.unit_price ?? 0)).toFixed(2),
+        reject_reason: o.reject_reason ?? "",
+      })));
+      setOrders(ordCsv);
+    })();
+  }, []);
+  return (
+    <div className="space-y-4">
+      <Card><CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Site Spend (based on usage × unit price)</CardTitle>
+        <Button size="sm" variant="outline" onClick={()=>downloadCSV("site-spend.csv", spend)}><FileDown className="h-4 w-4 mr-1"/>CSV</Button>
+      </CardHeader><CardContent>
         <Table>
-          <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Unit</TableHead><TableHead>Category</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Site</TableHead><TableHead>Materials Used</TableHead><TableHead>Total Spend (KES)</TableHead></TableRow></TableHeader>
           <TableBody>
-            {list.map(m => (<TableRow key={m.id}><TableCell className="font-medium">{m.name}</TableCell><TableCell>{m.unit}</TableCell><TableCell>{m.category}</TableCell></TableRow>))}
-            {list.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No materials yet</TableCell></TableRow>}
+            {spend.map((s, i) => <TableRow key={i}><TableCell>{s.site}</TableCell><TableCell>{s.materials}</TableCell><TableCell className="font-mono">{s.total_kes}</TableCell></TableRow>)}
+            {spend.length === 0 && <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-6">No usage yet</TableCell></TableRow>}
           </TableBody>
         </Table>
+      </CardContent></Card>
+      <Card><CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Order Lines (last 500)</CardTitle>
+        <Button size="sm" variant="outline" onClick={()=>downloadCSV("orders.csv", orders)}><FileDown className="h-4 w-4 mr-1"/>CSV</Button>
+      </CardHeader><CardContent>
+        <div className="text-sm text-muted-foreground">Use the CSV button for a spreadsheet of every order line including status, dispatched qty, unit price, and rejection reason.</div>
       </CardContent></Card>
     </div>
   );

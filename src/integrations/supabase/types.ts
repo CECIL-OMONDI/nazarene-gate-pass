@@ -140,7 +140,9 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          reorder_level: number
           unit: string
+          unit_price: number
           updated_at: string
         }
         Insert: {
@@ -149,7 +151,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          reorder_level?: number
           unit: string
+          unit_price?: number
           updated_at?: string
         }
         Update: {
@@ -158,7 +162,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          reorder_level?: number
           unit?: string
+          unit_price?: number
           updated_at?: string
         }
         Relationships: []
@@ -197,18 +203,21 @@ export type Database = {
       }
       order_items: {
         Row: {
+          dispatched_qty: number | null
           id: string
           material_id: string
           order_id: string
           quantity: number
         }
         Insert: {
+          dispatched_qty?: number | null
           id?: string
           material_id: string
           order_id: string
           quantity: number
         }
         Update: {
+          dispatched_qty?: number | null
           id?: string
           material_id?: string
           order_id?: string
@@ -235,36 +244,51 @@ export type Database = {
         Row: {
           contractor_id: string
           created_at: string
+          delivery_notes: string | null
           dispatched_at: string | null
           dispatched_by: string | null
           id: string
           notes: string | null
           received_at: string | null
           received_by: string | null
+          received_notes: string | null
+          reject_reason: string | null
+          rejected_at: string | null
+          rejected_by: string | null
           site_id: string
           status: Database["public"]["Enums"]["order_status"]
         }
         Insert: {
           contractor_id: string
           created_at?: string
+          delivery_notes?: string | null
           dispatched_at?: string | null
           dispatched_by?: string | null
           id?: string
           notes?: string | null
           received_at?: string | null
           received_by?: string | null
+          received_notes?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
           site_id: string
           status?: Database["public"]["Enums"]["order_status"]
         }
         Update: {
           contractor_id?: string
           created_at?: string
+          delivery_notes?: string | null
           dispatched_at?: string | null
           dispatched_by?: string | null
           id?: string
           notes?: string | null
           received_at?: string | null
           received_by?: string | null
+          received_notes?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
           site_id?: string
           status?: Database["public"]["Enums"]["order_status"]
         }
@@ -450,6 +474,7 @@ export type Database = {
           name: string
           quantity: number
           site_id: string
+          under_repair_count: number
           updated_at: string
         }
         Insert: {
@@ -460,6 +485,7 @@ export type Database = {
           name: string
           quantity?: number
           site_id: string
+          under_repair_count?: number
           updated_at?: string
         }
         Update: {
@@ -470,6 +496,7 @@ export type Database = {
           name?: string
           quantity?: number
           site_id?: string
+          under_repair_count?: number
           updated_at?: string
         }
         Relationships: [
@@ -604,6 +631,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      dispatch_order_partial: {
+        Args: {
+          _delivery_notes?: string
+          _driver: string
+          _order_id: string
+          _plate: string
+          _vehicle?: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -616,6 +653,10 @@ export type Database = {
       is_staff_admin: { Args: { _user_id: string }; Returns: boolean }
       lookup_login_email: { Args: { _phone: string }; Returns: string }
       receive_order: { Args: { _order_id: string }; Returns: undefined }
+      receive_order_v2: {
+        Args: { _notes?: string; _order_id: string }
+        Returns: undefined
+      }
       record_usage: {
         Args: {
           _material_id: string
@@ -626,6 +667,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      reject_order: {
+        Args: { _order_id: string; _reason: string }
+        Returns: undefined
+      }
       resolve_low_stock_alert: { Args: { _id: string }; Returns: undefined }
       restock_yard: {
         Args: {
@@ -634,6 +679,10 @@ export type Database = {
           _quantity: number
           _supplier?: string
         }
+        Returns: undefined
+      }
+      send_tool_for_repair: {
+        Args: { _count: number; _tool_id: string }
         Returns: undefined
       }
       set_tool_broken_count: {
@@ -647,8 +696,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      tool_repaired: {
+        Args: { _count: number; _tool_id: string }
+        Returns: undefined
+      }
       update_pending_order_item: {
         Args: { _item_id: string; _new_quantity: number }
+        Returns: undefined
+      }
+      write_off_tool: {
+        Args: { _count: number; _tool_id: string }
         Returns: undefined
       }
     }
@@ -659,8 +716,14 @@ export type Database = {
         | "contractor"
         | "site_storekeeper"
         | "engineer"
-      order_status: "pending" | "dispatched" | "received" | "cancelled"
-      tool_condition: "working" | "broken"
+      order_status:
+        | "pending"
+        | "dispatched"
+        | "received"
+        | "cancelled"
+        | "rejected"
+        | "partially_dispatched"
+      tool_condition: "working" | "broken" | "under_repair"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -795,8 +858,15 @@ export const Constants = {
         "site_storekeeper",
         "engineer",
       ],
-      order_status: ["pending", "dispatched", "received", "cancelled"],
-      tool_condition: ["working", "broken"],
+      order_status: [
+        "pending",
+        "dispatched",
+        "received",
+        "cancelled",
+        "rejected",
+        "partially_dispatched",
+      ],
+      tool_condition: ["working", "broken", "under_repair"],
     },
   },
 } as const

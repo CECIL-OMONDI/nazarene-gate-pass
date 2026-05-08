@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Send, MapPin, AlertOctagon } from "lucide-react";
+import { Plus, Trash2, Send, MapPin, AlertOctagon, Wrench } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 
 type Props = { readOnly?: boolean };
 
@@ -73,7 +74,7 @@ export function ContractorSiteDetail({ readOnly = false }: Props) {
     setYard(y ?? []);
     const { data: o } = await supabase
       .from("orders")
-      .select("id, status, created_at, order_items(quantity, materials(name, unit)), order_dispatches(driver_name, plate_number)")
+      .select("id, status, created_at, reject_reason, delivery_notes, order_items(quantity, dispatched_qty, materials(name, unit)), order_dispatches(driver_name, plate_number)")
       .eq("site_id", id).neq("status", "received").order("created_at", { ascending: false });
     setOrders(o ?? []);
     const { data: m } = await supabase.from("materials").select("*").order("name");
@@ -153,14 +154,24 @@ export function ContractorSiteDetail({ readOnly = false }: Props) {
             <div className="space-y-3">
               {orders.length === 0 && <div className="text-muted-foreground text-sm">No open orders</div>}
               {orders.map(o => (
-                <div key={o.id} className="border rounded p-3">
+                <div key={o.id} className={`border rounded p-3 ${o.status === "rejected" ? "border-destructive/50 bg-destructive/5" : ""}`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs uppercase tracking-wider px-2 py-0.5 rounded bg-muted">{o.status}</span>
+                    <span className={`text-xs uppercase tracking-wider px-2 py-0.5 rounded ${o.status === "rejected" ? "bg-destructive text-destructive-foreground" : o.status === "partially_dispatched" ? "bg-amber-500/30 text-amber-800" : "bg-muted"}`}>{o.status}</span>
                     <span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span>
                   </div>
+                  {o.reject_reason && <div className="text-sm mt-1 text-destructive">Rejected: {o.reject_reason}</div>}
                   <ul className="text-sm mt-2">
-                    {o.order_items.map((it: any, i: number) => <li key={i} className="flex justify-between border-t py-1"><span>{it.materials?.name}</span><span className="font-mono">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span></li>)}
+                    {o.order_items.map((it: any, i: number) => {
+                      const sent = it.dispatched_qty;
+                      return <li key={i} className="flex justify-between border-t py-1">
+                        <span>{it.materials?.name}</span>
+                        <span className="font-mono">{sent != null && Number(sent) !== Number(it.quantity)
+                          ? `${Number(sent).toFixed(2)} of ${Number(it.quantity).toFixed(2)}`
+                          : Number(it.quantity).toFixed(2)} {it.materials?.unit}</span>
+                      </li>;
+                    })}
                   </ul>
+                  {o.delivery_notes && <div className="text-xs italic text-muted-foreground mt-2">Note: {o.delivery_notes}</div>}
                   {o.order_dispatches && <div className="text-xs text-muted-foreground mt-2">In transit · Driver {o.order_dispatches.driver_name} · {o.order_dispatches.plate_number}</div>}
                 </div>
               ))}
@@ -192,13 +203,15 @@ function ToolsCard({ siteId, tools, reload, readOnly }: { siteId: string; tools:
       )}
       <ScrollArea className="max-h-64">
         <ul className="text-sm divide-y">
-          {tools.map(t => <li key={t.id} className="flex items-center justify-between py-1.5">
-            <span className="flex items-center gap-2">
-              {t.name}
-              {t.condition === "broken" && <span className="text-xs text-destructive font-medium">broken</span>}
+          {tools.map(t => <li key={t.id} className="flex items-center justify-between py-1.5 gap-2">
+            <span className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="truncate">{t.name}</span>
+              {t.condition === "broken" && <span className="text-xs text-destructive font-medium">broken {t.broken_count ?? 0}</span>}
+              {t.condition === "under_repair" && <span className="text-xs text-amber-600 font-medium">repair {t.under_repair_count ?? 0}</span>}
             </span>
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
               <span className="font-mono">{t.quantity}</span>
+              {!readOnly && t.broken_count > 0 && <WriteOffDialog tool={t} reload={reload} />}
               {!readOnly && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={()=>del(t.id)}><Trash2 className="h-3 w-3"/></Button>}
             </span>
           </li>)}
@@ -206,6 +219,35 @@ function ToolsCard({ siteId, tools, reload, readOnly }: { siteId: string; tools:
         </ul>
       </ScrollArea>
     </CardContent></Card>
+  );
+}
+
+function WriteOffDialog({ tool, reload }: { tool: any; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState("1");
+  const submit = async () => {
+    const n = Number(val);
+    if (!Number.isInteger(n) || n < 1 || n > tool.broken_count) return toast.error(`Enter 1..${tool.broken_count}`);
+    const { error } = await supabase.rpc("write_off_tool" as any, { _tool_id: tool.id, _count: n });
+    if (error) return toast.error(error.message);
+    toast.success("Written off"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={(o)=>{ setOpen(o); if (o) setVal("1"); }}>
+      <DialogTrigger asChild><Button variant="ghost" size="icon" className="h-6 w-6" title="Write off broken units"><Wrench className="h-3 w-3 text-destructive"/></Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Write off {tool.name}</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>How many broken units to discard? (max {tool.broken_count})</Label>
+          <Input type="number" min="1" max={tool.broken_count} step="1" value={val} onChange={e=>setVal(e.target.value)} />
+          <p className="text-xs text-muted-foreground">This permanently reduces the tool's quantity.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={submit}>Write Off</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
