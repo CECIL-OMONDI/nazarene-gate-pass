@@ -28,6 +28,8 @@ export default function YardDashboard({ readOnly = false }: Props) {
   const [sites, setSites] = useState<any[]>([]);
   const [siteInv, setSiteInv] = useState<any[]>([]);
   const [siteTools, setSiteTools] = useState<any[]>([]);
+  const [yardSearch, setYardSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
 
   const load = async () => {
     const [{ data: orders }, { data: y }, { data: m }, { data: a }, { data: s }, { data: si }, { data: tl }] = await Promise.all([
