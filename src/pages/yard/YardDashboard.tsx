@@ -80,12 +80,16 @@ export default function YardDashboard({ readOnly = false }: Props) {
         </TabsContent>
 
         <TabsContent value="yard">
-          <Card><CardHeader><CardTitle>Yard Stock</CardTitle></CardHeader><CardContent>
+          <Card><CardHeader className="flex-row items-center justify-between gap-2">
+            <CardTitle>Yard Stock</CardTitle>
+            <div className="relative w-56"><Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
+              <Input className="pl-7 h-9" placeholder="Search material…" value={yardSearch} onChange={e=>setYardSearch(e.target.value)} /></div>
+          </CardHeader><CardContent>
             <ScrollArea className="max-h-[70vh]">
               <Table>
                 <TableHeader><TableRow><TableHead>Material</TableHead><TableHead>Qty</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {yard.map(s => <TableRow key={s.material_id}><TableCell>{s.materials?.name}</TableCell><TableCell className="font-mono">{Number(s.quantity).toFixed(2)} {s.materials?.unit}</TableCell></TableRow>)}
+                  {yard.filter(s => !yardSearch || (s.materials?.name ?? "").toLowerCase().includes(yardSearch.toLowerCase())).map(s => <TableRow key={s.material_id}><TableCell>{s.materials?.name}</TableCell><TableCell className="font-mono">{Number(s.quantity).toFixed(2)} {s.materials?.unit}</TableCell></TableRow>)}
                   {yard.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-6">Empty</TableCell></TableRow>}
                 </TableBody>
               </Table>
