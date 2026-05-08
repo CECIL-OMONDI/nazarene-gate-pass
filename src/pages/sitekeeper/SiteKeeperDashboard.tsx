@@ -68,12 +68,23 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
                   {incoming.length === 0 && <div className="text-muted-foreground text-sm">No incoming deliveries.</div>}
                   {incoming.map(o => (
                     <div key={o.id} className="border rounded p-3">
-                      <div className="flex justify-between"><span className="font-semibold">Delivery</span><span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span></div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Delivery {o.status === "partially_dispatched" && <span className="text-xs ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700">partial</span>}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</span>
+                      </div>
                       {o.order_dispatches && <div className="text-xs text-muted-foreground">Driver {o.order_dispatches.driver_name} · {o.order_dispatches.plate_number}{o.order_dispatches.vehicle ? ` · ${o.order_dispatches.vehicle}` : ""}</div>}
+                      {o.delivery_notes && <div className="text-xs italic mt-1">"{o.delivery_notes}"</div>}
                       <ul className="text-sm mt-2">
-                        {o.order_items.map((it: any, i: number) => <li key={i} className="flex justify-between border-t py-1"><span>{it.materials?.name}</span><span className="font-mono">{Number(it.quantity).toFixed(2)} {it.materials?.unit}</span></li>)}
+                        {o.order_items.map((it: any, i: number) => {
+                          const sent = it.dispatched_qty ?? it.quantity;
+                          const short = Number(sent) < Number(it.quantity);
+                          return <li key={i} className="flex justify-between border-t py-1">
+                            <span>{it.materials?.name}{short && <span className="text-xs text-amber-700 ml-1">(of {Number(it.quantity)})</span>}</span>
+                            <span className="font-mono">{Number(sent).toFixed(2)} {it.materials?.unit}</span>
+                          </li>;
+                        })}
                       </ul>
-                      {!readOnly && <Button size="sm" className="mt-3 w-full" onClick={() => confirm(o.id)}><CheckCircle2 className="h-4 w-4 mr-1"/>Confirm Receipt</Button>}
+                      {!readOnly && <ReceiveDialog orderId={o.id} reload={loadSite} />}
                     </div>
                   ))}
                 </div>
@@ -95,23 +106,28 @@ export default function SiteKeeperDashboard({ readOnly = false }: Props) {
             </ScrollArea>
           </CardContent></Card>
 
-          <Card className="mt-4"><CardHeader><CardTitle><Wrench className="h-4 w-4 inline mr-1"/>Tools — Mark Condition</CardTitle></CardHeader><CardContent>
+          <Card className="mt-4"><CardHeader><CardTitle><Wrench className="h-4 w-4 inline mr-1"/>Tools — Condition & Repair</CardTitle></CardHeader><CardContent>
             <ScrollArea className="max-h-[60vh]">
               <Table>
-                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Broken</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Tool</TableHead><TableHead>Qty</TableHead><TableHead>Broken</TableHead><TableHead>In repair</TableHead><TableHead>Condition</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {tools.map(t => (
                     <TableRow key={t.id}>
                       <TableCell>{t.name}</TableCell>
                       <TableCell className="font-mono">{t.quantity}</TableCell>
                       <TableCell className="font-mono">{t.broken_count ?? 0}</TableCell>
-                      <TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : "text-muted-foreground"}>{t.condition}</span></TableCell>
+                      <TableCell className="font-mono">{t.under_repair_count ?? 0}</TableCell>
+                      <TableCell><span className={t.condition === "broken" ? "text-destructive font-medium" : t.condition === "under_repair" ? "text-amber-600" : "text-muted-foreground"}>{t.condition}</span></TableCell>
                       <TableCell className="text-right">
-                        {!readOnly && <BrokenDialog tool={t} reload={loadSite} />}
+                        {!readOnly && <div className="flex gap-1 justify-end flex-wrap">
+                          <BrokenDialog tool={t} reload={loadSite} />
+                          {t.broken_count > 0 && <RepairDialog tool={t} mode="send" reload={loadSite} />}
+                          {t.under_repair_count > 0 && <RepairDialog tool={t} mode="back" reload={loadSite} />}
+                        </div>}
                       </TableCell>
                     </TableRow>
                   ))}
-                  {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
+                  {tools.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No tools yet</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </ScrollArea>
