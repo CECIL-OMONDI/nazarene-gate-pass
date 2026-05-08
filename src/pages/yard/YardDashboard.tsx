@@ -61,11 +61,19 @@ export default function YardDashboard({ readOnly = false }: Props) {
         </div>
 
         <TabsContent value="orders">
-          <Card><CardHeader><CardTitle>Pending Orders</CardTitle></CardHeader><CardContent>
+          <Card><CardHeader className="flex-row items-center justify-between gap-2">
+            <CardTitle>Pending Orders</CardTitle>
+            <div className="relative w-56"><Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground"/>
+              <Input className="pl-7 h-9" placeholder="Search site/contractor…" value={orderSearch} onChange={e=>setOrderSearch(e.target.value)} /></div>
+          </CardHeader><CardContent>
             <ScrollArea className="max-h-[70vh] pr-3">
               <div className="space-y-3">
                 {pending.length === 0 && <div className="text-muted-foreground text-sm">No pending orders.</div>}
-                {pending.map(o => <OrderCard key={o.id} order={o} yard={yard} onChange={load} readOnly={readOnly} />)}
+                {pending.filter(o => {
+                  const q = orderSearch.toLowerCase();
+                  if (!q) return true;
+                  return (o.sites?.name ?? "").toLowerCase().includes(q) || (o.profiles?.full_name ?? "").toLowerCase().includes(q);
+                }).map(o => <OrderCard key={o.id} order={o} yard={yard} onChange={load} readOnly={readOnly} />)}
               </div>
             </ScrollArea>
           </CardContent></Card>
