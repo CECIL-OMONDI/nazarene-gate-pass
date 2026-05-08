@@ -203,13 +203,15 @@ function ToolsCard({ siteId, tools, reload, readOnly }: { siteId: string; tools:
       )}
       <ScrollArea className="max-h-64">
         <ul className="text-sm divide-y">
-          {tools.map(t => <li key={t.id} className="flex items-center justify-between py-1.5">
-            <span className="flex items-center gap-2">
-              {t.name}
-              {t.condition === "broken" && <span className="text-xs text-destructive font-medium">broken</span>}
+          {tools.map(t => <li key={t.id} className="flex items-center justify-between py-1.5 gap-2">
+            <span className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="truncate">{t.name}</span>
+              {t.condition === "broken" && <span className="text-xs text-destructive font-medium">broken {t.broken_count ?? 0}</span>}
+              {t.condition === "under_repair" && <span className="text-xs text-amber-600 font-medium">repair {t.under_repair_count ?? 0}</span>}
             </span>
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
               <span className="font-mono">{t.quantity}</span>
+              {!readOnly && t.broken_count > 0 && <WriteOffDialog tool={t} reload={reload} />}
               {!readOnly && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={()=>del(t.id)}><Trash2 className="h-3 w-3"/></Button>}
             </span>
           </li>)}
@@ -217,6 +219,35 @@ function ToolsCard({ siteId, tools, reload, readOnly }: { siteId: string; tools:
         </ul>
       </ScrollArea>
     </CardContent></Card>
+  );
+}
+
+function WriteOffDialog({ tool, reload }: { tool: any; reload: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState("1");
+  const submit = async () => {
+    const n = Number(val);
+    if (!Number.isInteger(n) || n < 1 || n > tool.broken_count) return toast.error(`Enter 1..${tool.broken_count}`);
+    const { error } = await supabase.rpc("write_off_tool" as any, { _tool_id: tool.id, _count: n });
+    if (error) return toast.error(error.message);
+    toast.success("Written off"); setOpen(false); reload();
+  };
+  return (
+    <Dialog open={open} onOpenChange={(o)=>{ setOpen(o); if (o) setVal("1"); }}>
+      <DialogTrigger asChild><Button variant="ghost" size="icon" className="h-6 w-6" title="Write off broken units"><Wrench className="h-3 w-3 text-destructive"/></Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Write off {tool.name}</DialogTitle></DialogHeader>
+        <div className="space-y-2">
+          <Label>How many broken units to discard? (max {tool.broken_count})</Label>
+          <Input type="number" min="1" max={tool.broken_count} step="1" value={val} onChange={e=>setVal(e.target.value)} />
+          <p className="text-xs text-muted-foreground">This permanently reduces the tool's quantity.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={submit}>Write Off</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
