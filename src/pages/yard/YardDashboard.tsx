@@ -138,12 +138,32 @@ export default function YardDashboard({ readOnly = false }: Props) {
 
 function OrderCard({ order, yard, onChange, readOnly }: { order: any; yard: any[]; onChange: () => void; readOnly: boolean }) {
   const [open, setOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [driver, setDriver] = useState(""); const [plate, setPlate] = useState(""); const [vehicle, setVehicle] = useState("");
+  const [deliveryNotes, setDeliveryNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lineQty, setLineQty] = useState<Record<string, string>>(() => {
+    const r: Record<string, string> = {};
+    order.order_items.forEach((it: any) => {
+      const avail = yard.find(y => y.material_id === it.materials?.id)?.quantity ?? 0;
+      r[it.id] = String(Math.min(Number(it.quantity), Number(avail)));
+    });
+    return r;
+  });
 
   const dispatch = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true);
-    const { error } = await supabase.rpc("dispatch_order", { _order_id: order.id, _driver: driver, _plate: plate, _vehicle: vehicle || null });
+    for (const it of order.order_items) {
+      const q = Number(lineQty[it.id] ?? it.quantity);
+      if (Number.isNaN(q) || q < 0) { setBusy(false); return toast.error("Invalid line quantity"); }
+      const { error } = await supabase.from("order_items").update({ dispatched_qty: q } as any).eq("id", it.id);
+      if (error) { setBusy(false); return toast.error(error.message); }
+    }
+    const { error } = await supabase.rpc("dispatch_order_partial" as any, {
+      _order_id: order.id, _driver: driver, _plate: plate,
+      _vehicle: vehicle || null, _delivery_notes: deliveryNotes || null,
+    });
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Order dispatched"); setOpen(false); onChange();
@@ -155,33 +175,71 @@ function OrderCard({ order, yard, onChange, readOnly }: { order: any; yard: any[
     toast.success("Order cancelled"); onChange();
   };
 
+  const rejectOrder = async () => {
+    if (rejectReason.trim().length < 3) return toast.error("Reason required (min 3 chars)");
+    const { error } = await supabase.rpc("reject_order" as any, { _order_id: order.id, _reason: rejectReason });
+    if (error) return toast.error(error.message);
+    toast.success("Order rejected"); setRejectOpen(false); setRejectReason(""); onChange();
+  };
+
   return (
     <div className="border rounded-lg p-4">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <div className="font-semibold">{order.sites?.name}</div>
           <div className="text-xs text-muted-foreground">By {order.profiles?.full_name} · {new Date(order.created_at).toLocaleString()}</div>
         </div>
         {!readOnly && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild><Button size="sm"><Truck className="h-4 w-4 mr-1"/>Dispatch</Button></DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Dispatch Order</DialogTitle></DialogHeader>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>Dispatch Order (partial allowed)</DialogTitle></DialogHeader>
                 <form onSubmit={dispatch} className="space-y-3">
-                  <div><Label>Driver name</Label><Input value={driver} onChange={e=>setDriver(e.target.value)} required /></div>
-                  <div><Label>Plate number</Label><Input value={plate} onChange={e=>setPlate(e.target.value)} required /></div>
-                  <div><Label>Vehicle (optional)</Label><Input value={vehicle} onChange={e=>setVehicle(e.target.value)} /></div>
+                  <div className="border rounded p-2 max-h-60 overflow-auto">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Set quantity to dispatch per line (0 = skip):</div>
+                    {order.order_items.map((it: any) => {
+                      const avail = yard.find(y => y.material_id === it.materials?.id)?.quantity ?? 0;
+                      return (
+                        <div key={it.id} className="grid grid-cols-[1fr_90px] gap-2 items-center py-1 border-t first:border-t-0">
+                          <div className="text-sm"><div>{it.materials?.name}</div>
+                            <div className="text-xs text-muted-foreground">requested {Number(it.quantity)} · yard {Number(avail).toFixed(2)}</div></div>
+                          <Input type="number" min="0" step="0.01"
+                            value={lineQty[it.id] ?? ""} onChange={e => setLineQty({ ...lineQty, [it.id]: e.target.value })} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label>Driver</Label><Input value={driver} onChange={e=>setDriver(e.target.value)} required /></div>
+                    <div><Label>Plate</Label><Input value={plate} onChange={e=>setPlate(e.target.value)} required /></div>
+                  </div>
+                  <div><Label>Vehicle</Label><Input value={vehicle} onChange={e=>setVehicle(e.target.value)} /></div>
+                  <div><Label>Delivery notes (proof / instructions)</Label><Textarea rows={2} value={deliveryNotes} onChange={e=>setDeliveryNotes(e.target.value)} /></div>
                   <Button className="w-full" disabled={busy}>{busy ? "Dispatching…" : "Confirm Dispatch"}</Button>
                 </form>
               </DialogContent>
             </Dialog>
+            <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+              <DialogTrigger asChild><Button size="sm" variant="outline"><XCircle className="h-4 w-4 mr-1"/>Reject</Button></DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Reject Order</DialogTitle></DialogHeader>
+                <div className="space-y-2">
+                  <Label>Reason (visible to contractor)</Label>
+                  <Textarea rows={3} value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="e.g. duplicate order, awaiting restock…" />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={()=>setRejectOpen(false)}>Cancel</Button>
+                  <Button variant="destructive" onClick={rejectOrder}>Reject Order</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <AlertDialog>
-              <AlertDialogTrigger asChild><Button size="sm" variant="destructive"><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
+              <AlertDialogTrigger asChild><Button size="sm" variant="ghost"><Trash2 className="h-4 w-4"/></Button></AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Cancel this order?</AlertDialogTitle>
-                  <AlertDialogDescription>This permanently removes the pending order from the contractor's dashboard.</AlertDialogDescription>
+                  <AlertDialogDescription>Permanently removes the pending order.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Keep</AlertDialogCancel>
