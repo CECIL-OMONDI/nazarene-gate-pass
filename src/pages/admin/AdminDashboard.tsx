@@ -52,6 +52,9 @@ export default function AdminDashboard() {
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="usage"><UsageTab /></TabsContent>
         <TabsContent value="alerts"><AlertsTab /></TabsContent>
+        <TabsContent value="transfers"><TransfersTab /></TabsContent>
+        <TabsContent value="transit"><DispatchedOrdersTab /></TabsContent>
+        <TabsContent value="audit"><AuditLogTab /></TabsContent>
         <TabsContent value="reports"><ReportsTab /></TabsContent>
         <TabsContent value="dashboards"><DashboardsTab /></TabsContent>
       </Tabs>
