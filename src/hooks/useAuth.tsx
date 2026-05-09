@@ -27,11 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       if (s?.user) {
         // defer to avoid deadlock per Supabase guidance
-        setTimeout(() => loadRoles(s.user.id), 0);
+        setTimeout(() => {
+          loadRoles(s.user.id);
+          if (event === "SIGNED_IN") {
+            supabase.rpc("touch_last_login" as any).then(() => {});
+          }
+        }, 0);
       } else {
         setRoles([]);
       }
