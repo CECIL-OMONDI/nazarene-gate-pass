@@ -16,11 +16,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink, UserCheck, FileDown, BarChart3 } from "lucide-react";
+import { Plus, Package, Users, MapPin, Boxes, Trash2, AlertTriangle, ExternalLink, UserCheck, FileDown, BarChart3, History, ArrowRightLeft, Truck, Power, Copy } from "lucide-react";
+import { AuditLogTab, TransfersTab, DispatchedOrdersTab } from "./AdminExtras";
 
-type Material = { id: string; name: string; unit: string; category: string | null; reorder_level?: number; unit_price?: number };
-type Profile = { id: string; username: string; full_name: string };
-type Site = { id: string; name: string; location: string | null; contractor_id: string | null; site_keeper_id: string | null; is_active: boolean };
+type Material = { id: string; name: string; unit: string; category: string | null; reorder_level?: number; unit_price?: number; sku?: string | null; supplier?: string | null };
+type Profile = { id: string; username: string; full_name: string; is_active?: boolean; last_login_at?: string | null };
+type Site = { id: string; name: string; location: string | null; contractor_id: string | null; site_keeper_id: string | null; is_active: boolean; progress_stage?: string };
 
 export default function AdminDashboard() {
   return (
@@ -36,6 +37,9 @@ export default function AdminDashboard() {
             <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users</TabsTrigger>
             <TabsTrigger value="usage">Site Usage</TabsTrigger>
             <TabsTrigger value="alerts"><AlertTriangle className="h-4 w-4 mr-1"/>Alerts</TabsTrigger>
+            <TabsTrigger value="transfers"><ArrowRightLeft className="h-4 w-4 mr-1"/>Transfers</TabsTrigger>
+            <TabsTrigger value="transit"><Truck className="h-4 w-4 mr-1"/>In-Transit</TabsTrigger>
+            <TabsTrigger value="audit"><History className="h-4 w-4 mr-1"/>Audit</TabsTrigger>
             <TabsTrigger value="reports"><BarChart3 className="h-4 w-4 mr-1"/>Reports</TabsTrigger>
             <TabsTrigger value="dashboards">Dashboards</TabsTrigger>
           </TabsList>
@@ -48,6 +52,9 @@ export default function AdminDashboard() {
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="usage"><UsageTab /></TabsContent>
         <TabsContent value="alerts"><AlertsTab /></TabsContent>
+        <TabsContent value="transfers"><TransfersTab /></TabsContent>
+        <TabsContent value="transit"><DispatchedOrdersTab /></TabsContent>
+        <TabsContent value="audit"><AuditLogTab /></TabsContent>
         <TabsContent value="reports"><ReportsTab /></TabsContent>
         <TabsContent value="dashboards"><DashboardsTab /></TabsContent>
       </Tabs>

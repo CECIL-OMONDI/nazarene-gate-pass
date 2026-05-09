@@ -10,6 +10,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 import RoleRouter from "./pages/RoleRouter";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import YardDashboard from "./pages/yard/YardDashboard";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/change-password" element={<RoleGuard allow={["admin","engineer","yard_storekeeper","contractor","site_storekeeper"]}><ChangePasswordPage /></RoleGuard>} />
             <Route path="/app" element={<RoleRouter />} />
             <Route path="/admin" element={<RoleGuard allow={["admin","engineer"]}><AdminDashboard /></RoleGuard>} />
             <Route path="/yard" element={<RoleGuard allow={["yard_storekeeper", "admin", "engineer"]}><YardDashboard /></RoleGuard>} />

@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_label: string | null
+          created_at: string
+          entity: string
+          entity_id: string | null
+          id: string
+          payload: Json | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_label?: string | null
+          created_at?: string
+          entity: string
+          entity_id?: string | null
+          id?: string
+          payload?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_label?: string | null
+          created_at?: string
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          payload?: Json | null
+        }
+        Relationships: []
+      }
       low_stock_alerts: {
         Row: {
           created_at: string
@@ -85,6 +118,51 @@ export type Database = {
           },
         ]
       }
+      material_transfers: {
+        Row: {
+          approved_by: string | null
+          created_at: string
+          from_site: string
+          id: string
+          material_id: string
+          quantity: number
+          reason: string | null
+          reject_reason: string | null
+          requested_by: string
+          status: Database["public"]["Enums"]["transfer_status"]
+          to_site: string
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          created_at?: string
+          from_site: string
+          id?: string
+          material_id: string
+          quantity: number
+          reason?: string | null
+          reject_reason?: string | null
+          requested_by: string
+          status?: Database["public"]["Enums"]["transfer_status"]
+          to_site: string
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          created_at?: string
+          from_site?: string
+          id?: string
+          material_id?: string
+          quantity?: number
+          reason?: string | null
+          reject_reason?: string | null
+          requested_by?: string
+          status?: Database["public"]["Enums"]["transfer_status"]
+          to_site?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       material_usage: {
         Row: {
           created_at: string
@@ -141,6 +219,8 @@ export type Database = {
           is_active: boolean
           name: string
           reorder_level: number
+          sku: string | null
+          supplier: string | null
           unit: string
           unit_price: number
           updated_at: string
@@ -152,6 +232,8 @@ export type Database = {
           is_active?: boolean
           name: string
           reorder_level?: number
+          sku?: string | null
+          supplier?: string | null
           unit: string
           unit_price?: number
           updated_at?: string
@@ -163,9 +245,35 @@ export type Database = {
           is_active?: boolean
           name?: string
           reorder_level?: number
+          sku?: string | null
+          supplier?: string | null
           unit?: string
           unit_price?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      order_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          order_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          order_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -242,6 +350,9 @@ export type Database = {
       }
       orders: {
         Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           contractor_id: string
           created_at: string
           delivery_notes: string | null
@@ -259,6 +370,9 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
         }
         Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           contractor_id: string
           created_at?: string
           delivery_notes?: string | null
@@ -276,6 +390,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
         }
         Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           contractor_id?: string
           created_at?: string
           delivery_notes?: string | null
@@ -315,6 +432,8 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          is_active: boolean
+          last_login_at: string | null
           phone: string | null
           updated_at: string
           username: string
@@ -324,6 +443,8 @@ export type Database = {
           email?: string | null
           full_name: string
           id: string
+          is_active?: boolean
+          last_login_at?: string | null
           phone?: string | null
           updated_at?: string
           username: string
@@ -333,6 +454,8 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean
+          last_login_at?: string | null
           phone?: string | null
           updated_at?: string
           username?: string
@@ -425,6 +548,8 @@ export type Database = {
           is_active: boolean
           location: string | null
           name: string
+          progress_notes: string | null
+          progress_stage: Database["public"]["Enums"]["site_progress"]
           site_keeper_id: string | null
           updated_at: string
         }
@@ -435,6 +560,8 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name: string
+          progress_notes?: string | null
+          progress_stage?: Database["public"]["Enums"]["site_progress"]
           site_keeper_id?: string | null
           updated_at?: string
         }
@@ -445,6 +572,8 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name?: string
+          progress_notes?: string | null
+          progress_stage?: Database["public"]["Enums"]["site_progress"]
           site_keeper_id?: string | null
           updated_at?: string
         }
@@ -612,6 +741,11 @@ export type Database = {
       }
     }
     Functions: {
+      approve_material_transfer: { Args: { _id: string }; Returns: undefined }
+      cancel_dispatched_order: {
+        Args: { _order_id: string; _reason: string }
+        Returns: undefined
+      }
       cancel_pending_order: { Args: { _order_id: string }; Returns: undefined }
       create_low_stock_alert: {
         Args: { _material_id: string; _message: string }
@@ -667,9 +801,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      reject_material_transfer: {
+        Args: { _id: string; _reason: string }
+        Returns: undefined
+      }
       reject_order: {
         Args: { _order_id: string; _reason: string }
         Returns: undefined
+      }
+      request_material_transfer: {
+        Args: {
+          _from_site: string
+          _material_id: string
+          _quantity: number
+          _reason?: string
+          _to_site: string
+        }
+        Returns: string
       }
       resolve_low_stock_alert: { Args: { _id: string }; Returns: undefined }
       restock_yard: {
@@ -685,6 +833,14 @@ export type Database = {
         Args: { _count: number; _tool_id: string }
         Returns: undefined
       }
+      set_site_progress: {
+        Args: {
+          _notes?: string
+          _site_id: string
+          _stage: Database["public"]["Enums"]["site_progress"]
+        }
+        Returns: undefined
+      }
       set_tool_broken_count: {
         Args: { _broken: number; _tool_id: string }
         Returns: undefined
@@ -696,10 +852,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_user_active: {
+        Args: { _active: boolean; _user_id: string }
+        Returns: undefined
+      }
       tool_repaired: {
         Args: { _count: number; _tool_id: string }
         Returns: undefined
       }
+      touch_last_login: { Args: never; Returns: undefined }
       update_pending_order_item: {
         Args: { _item_id: string; _new_quantity: number }
         Returns: undefined
@@ -723,7 +884,15 @@ export type Database = {
         | "cancelled"
         | "rejected"
         | "partially_dispatched"
+      site_progress:
+        | "planning"
+        | "foundation"
+        | "walling"
+        | "roofing"
+        | "finishing"
+        | "handover"
       tool_condition: "working" | "broken" | "under_repair"
+      transfer_status: "pending" | "approved" | "rejected" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -866,7 +1035,16 @@ export const Constants = {
         "rejected",
         "partially_dispatched",
       ],
+      site_progress: [
+        "planning",
+        "foundation",
+        "walling",
+        "roofing",
+        "finishing",
+        "handover",
+      ],
       tool_condition: ["working", "broken", "under_repair"],
+      transfer_status: ["pending", "approved", "rejected", "completed"],
     },
   },
 } as const
