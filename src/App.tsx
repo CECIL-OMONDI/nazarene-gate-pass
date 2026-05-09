@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/change-password" element={<RoleGuard allow={["admin","engineer","yard_storekeeper","contractor","site_storekeeper"]}><ChangePasswordPage /></RoleGuard>} />
             <Route path="/app" element={<RoleRouter />} />
             <Route path="/admin" element={<RoleGuard allow={["admin","engineer"]}><AdminDashboard /></RoleGuard>} />
             <Route path="/yard" element={<RoleGuard allow={["yard_storekeeper", "admin", "engineer"]}><YardDashboard /></RoleGuard>} />
