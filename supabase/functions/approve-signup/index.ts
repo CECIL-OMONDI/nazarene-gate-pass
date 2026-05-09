@@ -1,5 +1,7 @@
 // Admin/engineer-only: approve or reject a pending signup request.
-// On approve: creates the auth user, profile, and assigns role. Marks request approved.
+// On approve: creates the auth user with a one-time temporary password,
+// returns the temp password so the admin can share it. The user must change it
+// after first login (or via Forgot Password if they provided an email).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
@@ -11,6 +13,14 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+function genTempPassword(): string {
+  // 12-char password: letters + digits, no ambiguous chars
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -46,19 +56,21 @@ Deno.serve(async (req) => {
       return j({ ok: true });
     }
 
-    // approve → create auth user
+    // approve → generate temp password and create auth user
     const realEmail = reqRow.email as string | null;
-    const authEmail = realEmail || `${reqRow.phone}@mbingo.local`;
+    const authEmail = realEmail || `${(reqRow.phone as string).replace(/\D/g,"")}@mbingo.local`;
+    const tempPassword = genTempPassword();
 
     const { data: created, error: cErr } = await admin.auth.admin.createUser({
       email: authEmail,
-      password: reqRow.password,
+      password: tempPassword,
       email_confirm: true,
       user_metadata: {
         full_name: reqRow.full_name,
         phone: reqRow.phone,
         username: (reqRow.full_name as string).toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,30),
         email_real: realEmail,
+        must_change_password: true,
       },
     });
     if (cErr || !created.user) return j({ error: cErr?.message ?? "create failed" }, 400);
@@ -76,7 +88,7 @@ Deno.serve(async (req) => {
       status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: u.user.id,
     }).eq("id", id);
 
-    return j({ ok: true, user_id: created.user.id });
+    return j({ ok: true, user_id: created.user.id, temp_password: tempPassword, phone: reqRow.phone });
   } catch (e) {
     return j({ error: (e as Error).message }, 500);
   }
